@@ -2,10 +2,6 @@
 #define __INCLUDED_KARMA_ADSR_H
 
 class ADSR {
-private:
-//	bool released;
-//	long relSample;
-
 public:
 	float attack;
 	float decay;
@@ -13,8 +9,6 @@ public:
 	float release;
 
 	ADSR();
-//	void triggerKey();
-//	void releaseKey();
 
 	float getValue(long samplepos, long relSample);
 };
