@@ -55,7 +55,7 @@ void Channel::process(float *out1, long sampleFrames) {
 		float f = (float) (2 * sin(3.1415927f * cut / 44100));
 		float q = res;
 		float scale = res;
-		float dist = 1 + (program->distortion*100);
+		float dist = (program->distortion*100);
 
 		// loop
 		while (--sampleFrames >= 0)
@@ -69,8 +69,8 @@ void Channel::process(float *out1, long sampleFrames) {
 
 			sample = sample * vol1 + sample2 * vol2;
 
-//			if (sample < 0.01 && released)
-//				active = false;
+			if (abs(vol1 + vol2) < 0.01 && released)
+				active = false;
 
 			low = low + f * band;
 			high = scale * sample - low - q * band;
