@@ -6,52 +6,14 @@
 
 #include "VstProgram.h"
 #include "VstChannel.h"
+#include "param.h"
 
 enum
 {
 	kNumPrograms = 16,
 	kNumOutputs = 2,
 
-	kChannel = 0,
-	kWaveform1,
-	kFreq1,
-
-	kWaveform2,
-
-	kFreq2,
-
-	kWaveformMix,
-
-	kModEnvA,
-	kModEnvD,
-	kModEnvAmount,
-
-	kLFO1,
-	kLFO1rate,
-	kLFO1amount,
-
-	kLFO2,
-	kLFO2rate,
-	kLFO2amount,
-
-	kFilterType,
-	kFilterRes,
-	kFilterCut,
-	kFilterADSRAmount,
-
-	kFilterCutA,
-	kFilterCutD,
-	kFilterCutS,
-	kFilterCutR,
-
-	kDistortion,
-	kAmplifierA,
-	kAmplifierD,
-	kAmplifierS,
-	kAmplifierR,
-	kGain,
-
-	kTest,
+	kTest = kParamEnd,
 
 	kNumParams
 };
