@@ -3,6 +3,7 @@
 #include "param.h"
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifndef NULL
 #define NULL 0
@@ -36,8 +37,9 @@ Channel::~Channel() {
 		delete[] rightEcho;
 }
 
-#define LIMIT 32767
+
 //-----------------------------------------------------------------------------------------
+/*
 __inline int getSample(int wave, int phase, int wavelen) {
 	int sample = (int) (phase >> 20);
 	int pl = sample;
@@ -64,6 +66,95 @@ __inline int getSample(int wave, int phase, int wavelen) {
 		return ((2 * ((rand() % 1024) - 512)) * LIMIT) >> 10;
 	}
 }
+*/
+
+//-----------------------------------------------------------------------------------------
+#define MIN_UPDATE_RATE 65536
+void calculateVolumeUpdateRate(karma_Program *program, karma_Note * note) {
+	int vol;
+	int rate = MIN_UPDATE_RATE;
+
+	if (note->released) {
+		vol = program->amplifier.release;
+		vol >>= 7;
+	} else {
+		vol = program->amplifier.attack > program->amplifier.decay ? program->amplifier.attack : program->amplifier.decay;
+		vol >>= 7;
+	}
+	while (rate > vol) rate >>= 1;
+	if (rate == 0) rate += 1;
+	note->volumeUpdateRate = rate -1;
+}
+void calculateFreq2UpdateRate(karma_Program *program, karma_Note * note) {
+	note->freq2UpdateRate = 0;
+	return;
+
+	if (program->waveformMix < 50 || abs(program->modEnvAmount) < 0.2) {
+		note->freq2UpdateRate = MIN_UPDATE_RATE-1;
+		return;
+	}
+
+	int freq;
+	int rate = MIN_UPDATE_RATE;
+
+	if (note->released) {
+		freq = program->modEnv.release;
+		freq >>= 8;
+
+	} else {
+
+		freq = program->modEnv.attack > program->modEnv.decay ? program->modEnv.attack : program->modEnv.decay;
+		freq >>= 8;
+	}
+	while (rate > freq) rate >>= 1;
+	if (rate == 0) rate += 1;
+	note->freq2UpdateRate = rate -1;
+}
+void calculateWaveformUpdateRate(karma_Program *program, karma_Note * note) {
+/*
+	int wf;
+	if (program->waveformMix < 50) {
+		// only waveform1
+		2 * (440.0f * powf(2.0, (note[idx].currentNote - 69) / 12.0))
+	} else if (program->waveformMix > 1000) {
+		// only waveform2
+	} else {
+		// both waveforms;
+	}
+	while (rate > wf) rate >>= 1;
+	if (rate == 0) rate += 1;
+	note->waveformUpdateRate = rate -1;
+
+	if (note->waveformUpdateRate > note->freq2UpdateRate)
+		note->waveformUpdateRate = note->freq2UpdateRate;
+*/
+	note->waveformUpdateRate = 0;
+}
+void calculateLfo1UpdateRate(karma_Program *program, karma_Note *note) {
+	if (program->lfo1.amount < 50) {
+		note->lfo1UpdateRate = MIN_UPDATE_RATE-1;
+		return;
+	}
+
+	// TODO: something better than this...
+	note->lfo1UpdateRate = 0;
+}
+void calculateLfo2UpdateRate(karma_Program *program, karma_Note *note) {
+	if (!program->filter || program->lfo2.amount < 50) {
+		note->lfo2UpdateRate = MIN_UPDATE_RATE-1;
+		return;
+	}
+
+	// TODO: something better than this...
+	note->lfo2UpdateRate = 0;
+}
+void calculateUpdateRates(karma_Program *program, karma_Note *note) {
+	calculateVolumeUpdateRate(program,note);
+	calculateFreq2UpdateRate(program, note);
+	calculateWaveformUpdateRate(program, note);
+	calculateLfo1UpdateRate(program, note);
+	calculateLfo2UpdateRate(program, note);
+}
 
 //-----------------------------------------------------------------------------------------
 void Channel::process(int *left, int *right, long frames) {
@@ -86,14 +177,15 @@ void Channel::process(int *left, int *right, long frames) {
 			int sampleFrames = frames;
 			int lfo1phase = program.lfo1.phase;
 			int lfo2phase = program.lfo2.phase;
-			int lfo1 = (getSample(program.lfo1.waveform, lfo1phase, 2048) * program.lfo1.amount) >> 10;
-			int lfo2 = (getSample(program.lfo2.waveform, lfo2phase, 2048) * program.lfo2.amount) >> 10;
+			int lfo1 = (program.lfo1.waveformFunction(lfo1phase, 2048) * program.lfo1.amount) >> 10;
+			int lfo2 = (program.lfo2.waveformFunction(lfo2phase, 2048) * program.lfo2.amount) >> 10;
 
 			int lfo1rate = (0xffffffff/44100) * (program.lfo1.rate * 20);
 			int lfo2rate = (0xffffffff/44100) * (program.lfo2.rate * 20);
 			int freq1base = note[i].noteFreq * (1 + program.freq1);
 			int freq1 = freq1base + lfo1;
-			int freq2 = note[i].noteFreq * ((1 + program.freq2 + program.modEnvAmount * karma_ADSR_getValue(&program.modEnv, note[i].samplesPlayed, note[i].relSample) / 1024.0f)) + lfo1;
+			int freq2base = note[i].noteFreq * ((1 + program.freq2 + program.modEnvAmount * karma_ADSR_getValue(&program.modEnv, note[i].samplesPlayed, note[i].relSample) / 1024.0f));
+			int freq2 = freq2base + lfo1;
 
 			if (note[i].delta > 0)
 			{
@@ -111,64 +203,61 @@ void Channel::process(int *left, int *right, long frames) {
 			float q = res;
 			float scale = res;
 			int dist = 1024 + (program.distortion*20);
-			int vol = 0;
 			short realSample = 0;
-			int sample;
+			int sample = ((1024 - program.waveformMix) * program.waveform1Function(note[i].phase1, program.wavelen1) >> 10) + ((program.waveform2Function(note[i].phase2, program.wavelen2) * program.waveformMix) >> 10);
+
+			int vol = karma_ADSR_getValue(&program.amplifier, note[i].samplesPlayed, note[i].relSample);
+			vol *= program.gain;
+			vol >>= 10;
 
 			// loop
 			while (--sampleFrames >= 0)
 			{
-
-				if (program.waveformMix < 50)
-					sample = getSample(program.waveform1, note[i].phase1, program.wavelen1);
-				else if (program.waveformMix > 1000)
-					sample = getSample(program.waveform2, note[i].phase2, program.wavelen2);
-				else {
-					int tmp = 1024;
-					tmp -= program.waveformMix;
-					sample = getSample(program.waveform1, note[i].phase1, program.wavelen1);
-					sample *= tmp;
-					sample >>= 10;
-					
-					tmp = getSample(program.waveform2, note[i].phase2, program.wavelen2);
-					tmp *= program.waveformMix;
-					tmp >>= 10;
-					sample += tmp;
+				if ((note[i].samplesPlayed & note[i].waveformUpdateRate) == note[i].waveformUpdateRate) {
+					if (program.waveformMix < 50)
+						sample = program.waveform1Function(note[i].phase1, program.wavelen1);
+					else if (program.waveformMix > 1000)
+						sample = program.waveform2Function(note[i].phase2, program.wavelen2);
+					else {
+						int tmp = 1024;
+						tmp -= program.waveformMix;
+						sample = program.waveform1Function(note[i].phase1, program.wavelen1);
+						sample *= tmp;
+						sample >>= 10;
+						
+						tmp = program.waveform2Function(note[i].phase2, program.wavelen2);
+						tmp *= program.waveformMix;
+						tmp >>= 10;
+						sample += tmp;
+					}
 				}
 
 				if (freq1 < 0) freq1 = 0;
 				if (freq2 < 0) freq2 = 0;
 
 
-				if (program.filter >= 0.2) {
+				if (program.filter) {
 					float fsample = (float) (sample / 32767.0f);
 //					if (cut < 0) cut = 0;
 //					if (cut > 8192) cut = 8192;
 
-					// note[i].low = note[i].low + f * note[i].band;
 					note[i].low += f * note[i].band;
 					note[i].high = scale * fsample - note[i].low - q * note[i].band;
-					// note[i].band = f * note[i].high + note[i].band;
 					note[i].band += f * note[i].high;
+					note[i].notch = note[i].high + note[i].low;
 
-					note[i].notch = note[i].high;
-					note[i].notch += note[i].low;
-
-					if (program.filter < 0.4)
-						fsample = note[i].low;
-					else if (program.filter < 0.6)
-						fsample = note[i].high;
-					else if (program.filter < 0.8)
-						fsample = note[i].band;
-					else
-						fsample = note[i].notch;
+					switch (program.filter) {
+						default:
+						case 1:	fsample = note[i].low; break;
+						case 2: fsample = note[i].high; break;
+						case 3: fsample = note[i].band; break;
+						case 4: fsample = note[i].notch; break;
+					}
 
 					if (program.adsrAmount > 50)
 						cut = (program.cut + program.adsrAmount * karma_ADSR_getValue(&program.filterCut, note[i].samplesPlayed, note[i].relSample)/1024.0f)*8192 + lfo2 / 1024.0f;
 
 					f = (float) (2 * sinf(3.141592f * cut / 44100));
-//					q = res;
-//					scale = res;
 
 					fsample *= 32767;
 					sample = (int) fsample;
@@ -181,42 +270,48 @@ void Channel::process(int *left, int *right, long frames) {
 					sample = sample > 32767 ? 32767 : sample < -32767 ? -32767 : sample;
 				}
 
-				vol = karma_ADSR_getValue(&program.amplifier, note[i].samplesPlayed, note[i].relSample);
-				vol *= program.gain;
-				vol >>= 10;
+				realSample = (short) (((sample * vol) >> 10)&0xffff);
 
-				sample *= vol;
-				sample >>= 10;
-				sample &= 0xffff;
-				realSample = (short) (sample);
-
-				sample = realSample;
-				sample *= panl;
-				sample >>= 10;
-				*lBuf++ += sample;
-
-				sample = realSample;
-				sample *= panr;
-				sample >>= 10;
-				*rBuf++ += sample;
+				*lBuf++ += (realSample * panl) >> 10;
+				*rBuf++ += (realSample * panr) >> 10;
 
 				note[i].phase1 += freq1;
 				note[i].phase2 += freq2;
 
 				note[i].samplesPlayed++;
 
-				if (program.lfo1.amount > 50) {
-					lfo1phase += lfo1rate;
-					lfo1 = (getSample(program.lfo1.waveform, lfo1phase, 2048) * program.lfo1.amount) >> 10;
-					freq1 = freq1base + lfo1;
-				}
-				if (program.lfo2.amount > 50) {
-					lfo2phase += lfo2rate;
-					lfo2 = (getSample(program.lfo2.waveform, lfo2phase, 2048) * program.lfo2.amount) >> 10;
+				lfo1phase += lfo1rate;
+				lfo2phase += lfo2rate;
+
+				if ((note[i].samplesPlayed & note[i].volumeUpdateRate) == note[i].volumeUpdateRate) {
+					vol = karma_ADSR_getValue(&program.amplifier, note[i].samplesPlayed, note[i].relSample);
+					if (!note[i].released && vol == program.amplifier.sustain && note[i].samplesPlayed > program.amplifier.attack + program.amplifier.decay) {
+						note[i].volumeUpdateRate = MIN_UPDATE_RATE - 1;
+					}
+					vol *= program.gain;
+					vol >>= 10;
+		
 				}
 
-				if (program.waveformMix > 50)
-					freq2 = note[i].noteFreq * (1 + program.freq2 + program.modEnvAmount * karma_ADSR_getValue(&program.modEnv, note[i].samplesPlayed, note[i].relSample) / 1024.0f) + lfo1;
+				if ((note[i].samplesPlayed & note[i].lfo1UpdateRate) == note[i].lfo1UpdateRate) {
+					lfo1 = (program.lfo1.waveformFunction(lfo1phase, 2048) * program.lfo1.amount) >> 10;
+					freq1 = freq1base + lfo1;
+					freq2 = freq2base + lfo1;
+				}
+				if ((note[i].samplesPlayed & note[i].lfo2UpdateRate) == note[i].lfo2UpdateRate) {
+					lfo2 = (program.lfo2.waveformFunction(lfo2phase, 2048) * program.lfo2.amount) >> 10;
+				}
+
+
+				if ((note[i].samplesPlayed & note[i].freq2UpdateRate) == note[i].freq2UpdateRate) {
+					if (!note[i].released && note[i].samplesPlayed > program.modEnv.attack + program.modEnv.decay) {
+						// the mod adsr envelope is sustained and will not update anymore
+						note[i].freq2UpdateRate = MIN_UPDATE_RATE - 1;
+					}
+
+					freq2base = note[i].noteFreq * (1 + program.freq2 + program.modEnvAmount * karma_ADSR_getValue(&program.modEnv,note[i].samplesPlayed, note[i].relSample) / 1024.0f);
+					freq2 = freq2base + lfo1;
+				}
 
 
 				if (note[i].released && vol <= 0) {
@@ -339,6 +434,7 @@ void Channel::noteOn(long notenum, long velocity, long delta)
 	note[idx].delta = delta;
 	note[idx].high = note[idx].band = note[idx].low = note[idx].notch = 0;
 
+	calculateUpdateRates(&program, &note[idx]);
 	playing_notes++;
 
 	if (program.echoDelay > 1024 && !leftEcho) {
@@ -356,9 +452,9 @@ void Channel::noteOn(long notenum, long velocity, long delta)
 void Channel::noteOff(long notenum) {
 	for (int i = 0; i < playing_notes; i++) {
 		if (note[i].currentNote == notenum && !note[i].released) {
-
 			note[i].released = true;
 			note[i].relSample = note[i].samplesPlayed;
+			calculateUpdateRates(&program, &note[i]);
 			break;
 		}
 	}
@@ -366,38 +462,77 @@ void Channel::noteOff(long notenum) {
 //-----------------------------------------------------------------------------------------
 void Channel::setParameter(int index, int param) {
 	float value = param / 127.0f;
-	switch (index) {
-		case kWaveform1:	program.waveform1		= value*4;		break;
-		case kFreq1:		program.freq1			= (value*2)-1;		break;
-		case kFreq2:		program.freq2			= (value*2)-1;		break;
-		case kWaveform2:	program.waveform2		= value*4;		break;
-		case kModEnvA:		program.modEnv.attack		= (int)(value*44100*2);	break;
-		case kModEnvD:		program.modEnv.decay		= (int)(value*44100*2);	break;
-		case kModEnvAmount:	program.modEnvAmount		= (value*2)-1;		break;
-		case kWaveformMix:	program.waveformMix		= (int) (value * 1024);	break;
-		case kLFO1:		program.lfo1.waveform		= value*4;		break;
-		case kLFO1amount:	program.lfo1.amount		= (int) (value * (1024.0f * 80.0f));	break;
-		case kLFO1rate:		program.lfo1.rate		= value;		break;
-		case kLFO2:		program.lfo2.waveform		= value*4;		break;
-		case kLFO2amount:	program.lfo2.amount		= (int) (value * (1024.0f * 1024.0f));	break;
-		case kLFO2rate:		program.lfo2.rate		= value;		break;
-		case kFilterType:	program.filter			= value;		break;
-		case kFilterRes:	program.resonance		= value;		break;
-		case kFilterCut:	program.cut			= value;		break;
-		case kFilterADSRAmount:	program.adsrAmount		= value;		break;
-		case kFilterCutA:	program.filterCut.attack	= (int)(value*44100*2);	break;
-		case kFilterCutD:	program.filterCut.decay	= (int)(value*44100*2);	break;
-		case kFilterCutS:	program.filterCut.sustain	= (int)(value*1024);	break;
-		case kFilterCutR:	program.filterCut.release	= (int)(value*44100*2);	break;
-		case kDistortion:	program.distortion		= (int) (value*1024);	break;
-		case kAmplifierA:	program.amplifier.attack	= (int)(value*44100*2);	break;
-		case kAmplifierD:	program.amplifier.decay	= (int)(value*44100*2);	break;
-		case kAmplifierS:	program.amplifier.sustain	= (int)(value*1024);	break;
-		case kAmplifierR:	program.amplifier.release	= (int)(value*44100*2);	break;
-		case kGain:		program.gain			= (int)(value*1024);	break;
-		case kEchoDelay:	program.echoDelay		= (int)(value*MAX_ECHO);	break;
-		case kEchoAmount:	program.echoAmount		= (int)(value*1024);	break;
+	switch (index)
+	{
+		case kWaveform1:	
+			program.waveform1	= (int) (value*4.0f);
+			switch (program.waveform1) {
+				default: case 0: program.waveform1Function = sineSample; break;
+				case 1: program.waveform1Function = triSample; break;
+				case 2: program.waveform1Function = sawSample; break;
+				case 3: program.waveform1Function = squareSample; break;
+				case 4: program.waveform1Function = noiseSample; break;
+			}
+			break;
+		case kFreq1:		program.freq1		= (value*2)-1;	break;
+		case kFreq2:		program.freq2		= (value*2)-1;	break;
+		case kWaveform2:
+			program.waveform2	= (int) (value*4.0f);
+			switch (program.waveform2) {
+				default: case 0: program.waveform2Function = sineSample; break;
+				case 1: program.waveform2Function = triSample; break;
+				case 2: program.waveform2Function = sawSample; break;
+				case 3: program.waveform2Function = squareSample; break;
+				case 4: program.waveform2Function = noiseSample; break;
+			}
 
+			break;
+		case kWaveLen1:		program.wavelen1	= value*4096;	break;
+		case kWaveLen2:		program.wavelen2	= value*4096;	break;
+		case kModEnvA:		program.modEnv.attack	= (int)(value*44100*2);	break;
+		case kModEnvD:		program.modEnv.decay	= (int)(value*44100*2);	break;
+		case kModEnvAmount:	program.modEnvAmount	= (value*2)-1;	break;
+		case kWaveformMix:	program.waveformMix	= (int) (value * 1024);	break;
+		case kLFO1:
+			program.lfo1.waveform	= (int) (value*4.0f);
+			switch (program.lfo1.waveform) {
+				default: case 0: program.lfo1.waveformFunction = sineSample; break;
+				case 1: program.lfo1.waveformFunction = triSample; break;
+				case 2: program.lfo1.waveformFunction = sawSample; break;
+				case 3: program.lfo1.waveformFunction = squareSample; break;
+				case 4: program.lfo1.waveformFunction = noiseSample; break;
+			}
+			break;
+		case kLFO1amount:	program.lfo1.amount	= (int) (value * (1024.0f * 80.0f));	break;
+		case kLFO1rate:		program.lfo1.rate	= value;	break;
+		case kLFO2:
+			program.lfo2.waveform	= (int) (value*4.0f);
+			switch (program.lfo2.waveform) {
+				default: case 0: program.lfo2.waveformFunction = sineSample; break;
+				case 1: program.lfo2.waveformFunction = triSample; break;
+				case 2: program.lfo2.waveformFunction = sawSample; break;
+				case 3: program.lfo2.waveformFunction = squareSample; break;
+				case 4: program.lfo2.waveformFunction = noiseSample; break;
+			}
+			break;
+		case kLFO2amount:	program.lfo2.amount	= (int) (value * (1024.0f * 1024.0f));	break;
+		case kLFO2rate:		program.lfo2.rate	= value;	break;
+		case kFilterType:	program.filter		= value*4;	break;
+		case kFilterRes:	program.resonance	= value;	break;
+		case kFilterCut:	program.cut		= value;	break;
+		case kFilterADSRAmount:	program.adsrAmount	= value;	break;
+		case kFilterCutA:	program.filterCut.attack  = (int)(value*44100*2);	break;
+		case kFilterCutD:	program.filterCut.decay   = (int)(value*44100*2);	break;
+		case kFilterCutS:	program.filterCut.sustain = (int)(value*1024);	break;
+		case kFilterCutR:	program.filterCut.release = (int)(value*44100*2);	break;
+		case kDistortion:	program.distortion	  = (int) (value*1024);	break;
+		case kAmplifierA:	program.amplifier.attack  = (int)(value*44100*2);	break;
+		case kAmplifierD:	program.amplifier.decay   = (int)(value*44100*2);	break;
+		case kAmplifierS:	program.amplifier.sustain = (int)(value*1024);	break;
+		case kAmplifierR:	program.amplifier.release = (int)(value*44100*2);	break;
+		case kGain:		program.gain		  = (int)(value*1024);	break;
+		case kEchoDelay:	program.echoDelay	  = (int)(value*MAX_ECHO);	break;
+		case kEchoAmount:	program.echoAmount	  = (int)(value*1024);	break;
 		case kPan:
 			panl = sqrt(1.0-value) * 1024;
 			panr = sqrt(value) * 1024;
