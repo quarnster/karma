@@ -1,3 +1,5 @@
+#include <memory.h>
+
 #include "program.h"
 #include "param.h"
 
@@ -124,3 +126,4 @@ void karma_Program_setParameter(karma_Program *program, long index, float value)
 		case kEchoAmount:	program->echoAmount	  = (int)(value*1024);	break;
 	}
 }
+
