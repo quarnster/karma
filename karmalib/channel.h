@@ -21,6 +21,7 @@ typedef __declspec(align(32)) struct {
 	int playing_notes;
 	int events;
 
+	int volume;
 	int panl;
 	int panr;
 

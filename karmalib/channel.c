@@ -40,6 +40,7 @@ void karma_Channel_init(karma_Channel *channel) {
 	channel->leftEcho = NULL;
 	channel->rightEcho = NULL;
 	channel->active = FALSE;
+	channel->volume = 1024;
 
 	for (i = 0; i < MAX_NOTES; i++) {
 		channel->note[i].currentNote = -1;
@@ -201,7 +202,7 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 			short realSample = 0;
 			int sample = (((1024 - program->waveformMix) * program->waveform1Table[PHASE2TABLE(program->waveform1, note->phase1, program->wavelen1)]) >> 10) + ((program->waveform2Table[PHASE2TABLE(program->waveform2, note->phase2, program->wavelen2)] * program->waveformMix) >> 10);
 
-			int vol = (karma_ADSR_getValue(&program->amplifier, note->samplesPlayed, note->relSample) * program->gain) >> 10;
+			int vol = (((karma_ADSR_getValue(&program->amplifier, note->samplesPlayed, note->relSample) * program->gain) >> 10) * channel->volume) >> 10;
 
 			lBuf = channelBufferL;
 			rBuf = channelBufferR;
@@ -278,6 +279,8 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 						note->volumeUpdateRate = MIN_UPDATE_RATE - 1;
 					}
 					vol *= program->gain;
+					vol >>= 10;
+					vol *= channel->volume;
 					vol >>= 10;
 		
 				}
@@ -507,7 +510,7 @@ void karma_Channel_processEvent(karma_Channel *channel, karma_Event *event) {
 		karma_Channel_noteOff(channel, note);
 	} else if (cmd == 0xb0)	{// Channel Mode Messages
 		 if (event->data[1] == 7) { // volume change
-			karma_Program_setParameter(&channel->program, kGain, (event->data[2]&0x7f) / 127.0f);
+			 channel->volume = ((event->data[2]&0x7f) / 127.0f) * 1024;
 		} else if (event->data[1] == 10) { // pan change
 			float value = (event->data[2]&0x7f) / 127.0f;
 			channel->panl = sqrt(1.0f-value) * 1024;
