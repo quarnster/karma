@@ -1,14 +1,14 @@
 #ifndef __INCLUDED_KARMA_PROGRAM_H
 #define __INCLUDED_KARMA_PROGRAM_H
 
-#include "ADSR.h"
-#include "LFO.h"
+#include "adsr.h"
+#include "lfo.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef __declspec(align(32)) struct {
+typedef struct {
 	int waveform1;
 	int waveform2;
 
@@ -54,3 +54,4 @@ float karma_Program_getParameter(karma_Program *program, long index);
 #endif
 
 #endif
+
