@@ -160,6 +160,9 @@
 				RelativePath=".\LFO.h">
 			</File>
 			<File
+				RelativePath=".\note.h">
+			</File>
+			<File
 				RelativePath=".\program.h">
 			</File>
 			<File
@@ -228,13 +231,37 @@
 			</Filter>
 		</Filter>
 		<File
+			RelativePath=".\resources\background.bmp">
+		</File>
+		<File
+			RelativePath=".\resources\button.bmp">
+		</File>
+		<File
+			RelativePath=".\resources\env-mode.bmp">
+		</File>
+		<File
+			RelativePath=".\resources\filter-mode.bmp">
+		</File>
+		<File
 			RelativePath=".\karmavst.rc">
 		</File>
 		<File
-			RelativePath=".\note.h">
+			RelativePath=".\resources\knob.bmp">
+		</File>
+		<File
+			RelativePath=".\resources\knobfg.bmp">
+		</File>
+		<File
+			RelativePath=".\resources\osc-mode.bmp">
 		</File>
 		<File
 			RelativePath=".\resource.h">
+		</File>
+		<File
+			RelativePath=".\vstkarmaeditor.cpp">
+		</File>
+		<File
+			RelativePath=".\vstkarmaeditor.h">
 		</File>
 	</Files>
 	<Globals>
