@@ -4,10 +4,10 @@
 #include "ADSR.h"
 #include "LFO.h"
 
-//typedef ((int)
-#ifdef __GNUC__
-#define __declspec(x) __attribute__((x))
+#ifdef __cplusplus
+extern "C" {
 #endif
+
 typedef __declspec(align(32)) struct {
 	int waveform1;
 	int waveform2;
@@ -17,8 +17,6 @@ typedef __declspec(align(32)) struct {
 
 	int wavelen1;
 	int wavelen2;
-//	ADSR freq1;
-//	ADSR freq2;
 
 	float freq1;
 	float freq2;
@@ -29,15 +27,12 @@ typedef __declspec(align(32)) struct {
 
 	karma_LFO lfo1;
 	karma_LFO lfo2;
-//	ADSR volume1;
-//	ADSR volume2;
 
 
 	int filter;
 	float resonance;
 	float cut;
 	float adsrAmount;
-//	ADSR filterRes;
 	karma_ADSR filterCut;
 
 	int distortion;
@@ -49,11 +44,10 @@ typedef __declspec(align(32)) struct {
 	int echoAmount;
 } karma_Program;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void karma_Program_init(karma_Program *program);
+void karma_Program_setParameter(karma_Program *program, long index, float value);
+float karma_Program_getParameter(karma_Program *program, long index);
+
 
 #ifdef __cplusplus
 }
