@@ -104,6 +104,9 @@
 				RelativePath=".\Channel.c">
 			</File>
 			<File
+				RelativePath=".\karma.c">
+			</File>
+			<File
 				RelativePath=".\program.c">
 			</File>
 			<File
@@ -119,6 +122,12 @@
 			</File>
 			<File
 				RelativePath=".\Channel.h">
+			</File>
+			<File
+				RelativePath=".\karma.h">
+			</File>
+			<File
+				RelativePath=".\karmainternal.h">
 			</File>
 			<File
 				RelativePath=".\LFO.h">
