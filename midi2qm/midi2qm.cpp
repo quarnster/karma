@@ -80,6 +80,7 @@ void sort(MidiEvent *events, int num) {
 		}
 	}
 
+	// sort by commands
 	for (int i = 0; i < num; i++) {
 		for (int j = 0; j < num; j++) {
 			if (events[i].data[0] > events[j].data[0]) {
@@ -90,6 +91,8 @@ void sort(MidiEvent *events, int num) {
 			}
 		}
 	}
+
+	// sort 0xb0-commands by argument 1
 	for (int i = 0; i < num; i++) {
 		for (int j = 0; j < num; j++) {
 			if ((events[i].data[0] &0xf0) == 0xb0 && (events[i].data[0] == events[j].data[0])) {
@@ -102,6 +105,8 @@ void sort(MidiEvent *events, int num) {
 			}
 		}
 	}
+
+	// sort all non 0xb0-commands by time
 	for (int i = 0; i < num; i++) {
 		for (int j = 0; j < num; j++) {
 			if ((events[i].data[0] &0xf0) != 0xb0 && (events[i].data[0] == events[j].data[0]) &&  events[i].time < events[j].time) {
