@@ -1,17 +1,19 @@
 #ifndef __INCLUDED_KARMA_CHANNEL_H
 #define __INCLUDED_KARMA_CHANNEL_H
 
-#include "Program.h"
+#include "program.h"
 #include "note.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define MAX_NOTES 10
 
-class Channel {
-protected:
-	bool active;
+typedef __declspec(align(32)) struct {
+	char active;
 	int playing_notes;
 
-private:
 	int panl;
 	int panr;
 
@@ -19,40 +21,23 @@ private:
 	int *rightEcho;
 	int echoPos;
 	int echoSamples;
-//	long relSample;
-
-	// ----------------------------
-//	float fPhase1, fPhase2;
-
-//	long samplesPlayed;
-
-	long currentVelocity;
-//	long currentDelta;
 
 
-public:
 	karma_Program program;
 	karma_Note note[MAX_NOTES];
-//	bool released;
-//	long currentNote;
+} karma_Channel;
 
-	Channel();
-	~Channel();
+void karma_Channel_init(karma_Channel *channel);
+void karma_Channel_free(karma_Channel *channel);
+void karma_Channel_process(karma_Channel *channel, int *left, int *right, long sampleFrames);
+void karma_Channel_noteOn(karma_Channel *channel, long note, long velocity, long delta);
+void karma_Channel_noteOff(karma_Channel *channel, long note);
 
-	void process(int *left, int *right, long sampleFrames);
-	void noteOn(long note, long velocity, long delta);
-	void noteOff(long note);
+void karma_Channel_allNotesOff(karma_Channel *channel);
 
-	void setParameter(int cmd, int param);
-
-	void AllNotesOff() {
-		for (int i = 0; i < playing_notes; i++) {
-			note[i].released = true;
-			note[i].relSample = note[i].samplesPlayed;
-		}
-	}
-
-};
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif

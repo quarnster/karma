@@ -51,7 +51,7 @@ void VstKarma::process (float **inputs, float **outputs, long sampleFrames)
 		memset(&bufferL, 0, BUFFERSIZE * sizeof(int));
 		memset(&bufferR, 0, BUFFERSIZE * sizeof(int));
 		for (int i = 0; i < 16; i++) {
-			channel[i].process(bufferL, bufferR, sampleFrames);
+			karma_Channel_process(&channel[i], bufferL, bufferR, sampleFrames);
 		}
 		for (int i = 0; i < sampleFrames; i++) {
 			float samplel = bufferL[i] / 32767.0f;
@@ -73,7 +73,7 @@ void VstKarma::processReplacing (float **inputs, float **outputs, long sampleFra
 		memset(&bufferL, 0, BUFFERSIZE * sizeof(int));
 		memset(&bufferR, 0, BUFFERSIZE * sizeof(int));
 		for (int i = 0; i < 16; i++) {
-			channel[i].process(bufferL, bufferR, sampleFrames);
+			karma_Channel_process(&channel[i], bufferL, bufferR, sampleFrames);
 		}
 
 		for (int i = 0; i < sampleFrames; i++) {
@@ -105,15 +105,21 @@ long VstKarma::processEvents (VstEvents* ev)
 			if (cmd == 0x80)
 				velocity = 0;
 			if (!velocity/* && (note == channel[chn].currentNote)*/)
-				channel[chn].noteOff(note);	// note off by velocity 0
+				karma_Channel_noteOff(&channel[chn], note);	// note off by velocity 0
 			else
-				channel[chn].noteOn(note, velocity, event->deltaFrames);
+				karma_Channel_noteOn(&channel[chn], note, velocity, event->deltaFrames);
 		} else if (cmd == 0xb0)	{// Channel Mode Messages
+			if (event->deltaFrames) {
+				char buf[256];
+				sprintf(buf, "warning: %d, %d\n", midiData[1], event->deltaFrames);
+				Debug(buf);
+			}
+
 			if (midiData[1] == 120 || midiData[1] >= 123) {
 				// 120 -> All sounds off
 				// 123->127 different all notes off (TODO: implement better)
 				for (int i = 0; i < 16; i++)
-					channel[i].AllNotesOff();
+					karma_Channel_allNotesOff(&channel[i]);
 
 				if (midiData[1] > 123) {
 					char buf[256];
@@ -121,13 +127,16 @@ long VstKarma::processEvents (VstEvents* ev)
 					Debug(buf);
 				}
 			} else if (midiData[1] == 7) { // volume change
-				channel[chn].setParameter(kGain, midiData[2]&0x7f);
+				karma_Program_setParameter(&channel[chn].program, kGain, (midiData[2]&0x7f) / 127.0f);
 			} else if (midiData[1] == 10) { // pan change
-				channel[chn].setParameter(kPan, midiData[2]&0x7f);
+				float value = (midiData[2]&0x7f) / 127.0f;
+				channel[chn].panl = sqrt(1.0f-value) * 1024;
+				channel[chn].panl = sqrt(value) * 1024;
+//				karma_Program_setParameter(&channel[chn].program, kPan, (midiData[2]&0x7f) / 127.0f);
 			} else if (midiData[1] == 74) { // cut off
-				channel[chn].setParameter(kFilterCut, midiData[2]&0x7f);
+				karma_Program_setParameter(&channel[chn].program, kFilterCut, (midiData[2]&0x7f) / 127.0f);
 			} else if (midiData[1] >= 12) {
-				channel[chn].setParameter(midiData[1] - 12, midiData[2]&0x7f);
+				karma_Program_setParameter(&channel[chn].program, midiData[1] - 12, (midiData[2]&0x7f) / 127.0f);
 			} else {
 				char buf[256];
 				sprintf(buf, "unimplemented control: %d, %d\n", cmd, midiData[1]);

@@ -23,7 +23,7 @@ VstKarma::VstKarma(audioMasterCallback audioMaster) : AudioEffectX (audioMaster,
 	setProgram (0);
 	karma_Waveform_initTables();
 	for (int i = 0; i < 16; i++) {
-		karma_Program_init(&channel[i].program);
+		karma_Channel_init(&channel[i]);
 		sprintf(names[i], "Instr. %d", i+1);
 	}
 
@@ -46,6 +46,9 @@ VstKarma::VstKarma(audioMasterCallback audioMaster) : AudioEffectX (audioMaster,
 //-----------------------------------------------------------------------------------------
 VstKarma::~VstKarma ()
 {
+	for (int i = 0; i < 16; i++) {
+		karma_Channel_free(&channel[i]);
+	}
 }
 
 //-----------------------------------------------------------------------------------------
@@ -300,84 +303,14 @@ void VstKarma::getParameterName (long index, char *label)
 //-----------------------------------------------------------------------------------------
 void VstKarma::setParameter (long index, float value)
 {
-	switch (index)
-	{
-		case kWaveform1:	
-			currentProgram->waveform1	= (int) (value*4.0f);
-			switch (currentProgram->waveform1) {
-				default: case 0: currentProgram->waveform1Table = sineTable; break;
-				case 1: currentProgram->waveform1Table = triTable; break;
-				case 2: currentProgram->waveform1Table = sawTable; break;
-				case 3: currentProgram->waveform1Table = squareTable; break;
-				case 4: currentProgram->waveform1Table = noiseTable; break;
-			}
-			break;
-		case kFreq1:		currentProgram->freq1		= (value*2)-1;	break;
-		case kFreq2:		currentProgram->freq2		= (value*2)-1;	break;
-		case kWaveform2:
-			currentProgram->waveform2	= (int) (value*4.0f);
-			switch (currentProgram->waveform2) {
-				default: case 0: currentProgram->waveform2Table = sineTable; break;
-				case 1: currentProgram->waveform2Table = triTable; break;
-				case 2: currentProgram->waveform2Table = sawTable; break;
-				case 3: currentProgram->waveform2Table = squareTable; break;
-				case 4: currentProgram->waveform2Table = noiseTable; break;
-			}
-
-			break;
-		case kWaveLen1:		currentProgram->wavelen1	= value*WAVETABLESIZE;	break;
-		case kWaveLen2:		currentProgram->wavelen2	= value*WAVETABLESIZE;	break;
-		case kModEnvA:		currentProgram->modEnv.attack	= (int)(value*44100*2);	break;
-		case kModEnvD:		currentProgram->modEnv.decay	= (int)(value*44100*2);	break;
-		case kModEnvAmount:	currentProgram->modEnvAmount	= (value*2)-1;	break;
-		case kWaveformMix:	currentProgram->waveformMix	= (int) (value * 1024);	break;
-		case kLFO1:
-			currentProgram->lfo1.waveform	= (int) (value*4.0f);
-			switch (currentProgram->lfo1.waveform) {
-				default: case 0: currentProgram->lfo1.waveformTable = sineTable; break;
-				case 1: currentProgram->lfo1.waveformTable = triTable; break;
-				case 2: currentProgram->lfo1.waveformTable = sawTable; break;
-				case 3: currentProgram->lfo1.waveformTable = squareTable; break;
-				case 4: currentProgram->lfo1.waveformTable = noiseTable; break;
-			}
-			break;
-		case kLFO1amount:	currentProgram->lfo1.amount	= (int) (value * (1024.0f * 80.0f));	break;
-		case kLFO1rate:		currentProgram->lfo1.rate	= value;	break;
-		case kLFO2:
-			currentProgram->lfo2.waveform	= (int) (value*4.0f);
-			switch (currentProgram->lfo2.waveform) {
-				default: case 0: currentProgram->lfo2.waveformTable = sineTable; break;
-				case 1: currentProgram->lfo2.waveformTable = triTable; break;
-				case 2: currentProgram->lfo2.waveformTable = sawTable; break;
-				case 3: currentProgram->lfo2.waveformTable = squareTable; break;
-				case 4: currentProgram->lfo2.waveformTable = noiseTable; break;
-			}
-			break;
-		case kLFO2amount:	currentProgram->lfo2.amount	= (int) (value * (1024.0f * 1024.0f));	break;
-		case kLFO2rate:		currentProgram->lfo2.rate	= value;	break;
-		case kFilterType:	currentProgram->filter		= value*4;	break;
-		case kFilterRes:	currentProgram->resonance	= value;	break;
-		case kFilterCut:	currentProgram->cut		= value;	break;
-		case kFilterADSRAmount:	currentProgram->adsrAmount	= value;	break;
-		case kFilterCutA:	currentProgram->filterCut.attack  = (int)(value*44100*2);	break;
-		case kFilterCutD:	currentProgram->filterCut.decay   = (int)(value*44100*2);	break;
-		case kFilterCutS:	currentProgram->filterCut.sustain = (int)(value*1024);	break;
-		case kFilterCutR:	currentProgram->filterCut.release = (int)(value*44100*2);	break;
-		case kDistortion:	currentProgram->distortion	  = (int) (value*1024);	break;
-		case kAmplifierA:	currentProgram->amplifier.attack  = (int)(value*44100*2);	break;
-		case kAmplifierD:	currentProgram->amplifier.decay   = (int)(value*44100*2);	break;
-		case kAmplifierS:	currentProgram->amplifier.sustain = (int)(value*1024);	break;
-		case kAmplifierR:	currentProgram->amplifier.release = (int)(value*44100*2);	break;
-		case kGain:		currentProgram->gain		  = (int)(value*1024);	break;
-		case kEchoDelay:	currentProgram->echoDelay	  = (int)(value*MAX_ECHO);	break;
-		case kEchoAmount:	currentProgram->echoAmount	  = (int)(value*1024);	break;
-		case kTest:
-			if (value > .5 && channel[currentProgramIndex].note[0].released) {
-				channel[currentProgramIndex].noteOn (0x40, 0x64, 0);
-			} else if (value <= 0.5 && !channel[currentProgramIndex].note[0].released) {
-				channel[currentProgramIndex].noteOff(0x40);
-			}
-			break;
+	if (index == kTest) {
+		if (value > .5 && channel[currentProgramIndex].note[0].released) {
+			karma_Channel_noteOn(&channel[currentProgramIndex], 0x40, 0x64, 0);
+		} else if (value <= 0.5 && !channel[currentProgramIndex].note[0].released) {
+			karma_Channel_noteOff(&channel[currentProgramIndex], 0x40);
+		}
+	} else {
+		karma_Program_setParameter(&channel[currentProgramIndex].program, index, value);
 	}
 	if (editor)
 		((AEffGUIEditor*)editor)->setParameter (index, value);
@@ -387,43 +320,11 @@ void VstKarma::setParameter (long index, float value)
 float VstKarma::getParameter (long index)
 {
 	float value = 0;
-	switch (index)
-	{
-		case kWaveform1:	value = (currentProgram->waveform1 / 4.0f);		break;
-		case kFreq1:		value = (currentProgram->freq1/2.0)+0.5f;	break;
-		case kFreq2:		value = (currentProgram->freq2/2.0)+0.5f;	break;
-		case kWaveLen1:		value = currentProgram->wavelen1 / (float) WAVETABLESIZE;	break;
-		case kWaveLen2:		value = currentProgram->wavelen2 / (float) WAVETABLESIZE;	break;
-		case kWaveform2:	value = (currentProgram->waveform2 / 4.0f);		break;
-		case kModEnvA:		value = (currentProgram->modEnv.attack / (44100*2.0f));		break;
-		case kModEnvD:		value = (currentProgram->modEnv.decay / (44100*2.0f));		break;
-		case kModEnvAmount:	value = (currentProgram->modEnvAmount/2.0)+0.5f;break;
-		case kWaveformMix:	value = (currentProgram->waveformMix / 1024.0f);		break;
-		case kLFO1:		value = (currentProgram->lfo1.waveform / 4.0f);		break;
-		case kLFO1amount:	value = currentProgram->lfo1.amount / (1024.0f * 80.0f);		break;
-		case kLFO1rate:		value = currentProgram->lfo1.rate;		break;
-		case kLFO2:		value = (currentProgram->lfo2.waveform / 4.0f);		break;
-		case kLFO2amount:	value = currentProgram->lfo2.amount / (1024.0f * 1024.0f);		break;
-		case kLFO2rate:		value = currentProgram->lfo2.rate;		break;
-		case kFilterType:	value = currentProgram->filter / 4.0f;			break;
-		case kFilterRes:	value = currentProgram->resonance;		break;
-		case kFilterCut:	value = currentProgram->cut;			break;
-		case kFilterADSRAmount:	value = currentProgram->adsrAmount;		break;
-		case kFilterCutA:	value = (currentProgram->filterCut.attack / (44100*2.0f));	break;
-		case kFilterCutD:	value = (currentProgram->filterCut.decay / (44100*2.0f));	break;
-		case kFilterCutS:	value = currentProgram->filterCut.sustain / 1024.0f;	break;
-		case kFilterCutR:	value = (currentProgram->filterCut.release / (44100*2.0f));	break;
-		case kDistortion:	value = (currentProgram->distortion / 1024.0f);		break;
-		case kAmplifierA:	value = (currentProgram->amplifier.attack / (44100*2.0f));	break;
-		case kAmplifierD:	value = (currentProgram->amplifier.decay / (44100*2.0f));	break;
-		case kAmplifierS:	value = currentProgram->amplifier.sustain / 1024.0f;	break;
-		case kAmplifierR:	value = (currentProgram->amplifier.release / (44100*2.0f));	break;
-		case kGain:		value = currentProgram->gain / 1024.0f;			break;
-		case kEchoDelay:	value = currentProgram->echoDelay / ((float) MAX_ECHO);		break;
-		case kEchoAmount:	value = currentProgram->echoAmount / 1024.0f;		break;
-		case kTest:
-					value = !channel[currentProgramIndex].note[0].released;
 
+	if (index == kTest) {
+		value = !channel[currentProgramIndex].note[0].released;
+	} else {
+		value = karma_Program_getParameter(&channel[currentProgramIndex].program, index);
 	}
 	return value;
 }

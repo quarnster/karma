@@ -60,7 +60,7 @@ private:
 	void initProcess();
 
 	char names[16][30];
-	Channel channel[16];
+	karma_Channel channel[16];
 //	Program* programs;
 	karma_Program* currentProgram;
 	long	currentProgramIndex;

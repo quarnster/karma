@@ -149,7 +149,7 @@
 				RelativePath=".\ADSR.h">
 			</File>
 			<File
-				RelativePath="Channel.cpp">
+				RelativePath=".\Channel.c">
 			</File>
 			<File
 				RelativePath="Channel.h">
