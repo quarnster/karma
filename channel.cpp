@@ -15,7 +15,7 @@ int channelBufferR[BUFFERSIZE];
 //-----------------------------------------------------------------------------------------
 Channel::Channel() {
 	volume = 1024;
-	panl = panr = 512;
+	panl = panr = sqrt(0.5) * 1024;
 	program = NULL;
 	playing_notes = 0;
 	leftEcho = rightEcho = NULL;
@@ -25,7 +25,7 @@ Channel::Channel() {
 		note[i].released = true;
 		note[i].active = active = false;
 		note[i].samplesPlayed = 0;
-		note[i].relSample = -1;
+		note[i].relSample = 0;
 		note[i].high = note[i].band = note[i].low = note[i].notch = 0;
 	}
 }
@@ -272,7 +272,7 @@ void Channel::noteOn(long notenum, long velocity, long delta)
 	note[playing_notes].active = true;
 	note[playing_notes].currentNote = notenum;
 	note[playing_notes].samplesPlayed = 0;
-	note[playing_notes].relSample = -1;
+	note[playing_notes].relSample = 0;
 	note[playing_notes].delta = delta;
 	note[playing_notes].high = note[playing_notes].band = note[playing_notes].low = note[playing_notes].notch = 0;
 
