@@ -10,7 +10,7 @@
 enum
 {
 	kNumPrograms = 16,
-	kNumOutputs = 1,
+	kNumOutputs = 2,
 
 	kChannel = 0,
 	kWaveform1,
