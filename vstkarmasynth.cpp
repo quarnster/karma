@@ -42,26 +42,36 @@ void VstKarma::initProcess ()
 //	fScaler = (float)((double)kWaveSize / 44100.);	// we don't know the sample rate yet
 }
 
+int buffer[44100];
 //-----------------------------------------------------------------------------------------
 void VstKarma::process (float **inputs, float **outputs, long sampleFrames)
 {
-	for (int i = 0; i < 16; i++) {
-		channel[i].process(outputs[0], sampleFrames);
-	}						
+	if (sampleFrames <= 44100) {
+		memset(&buffer, 0, 44100 * sizeof(int));
+		for (int i = 0; i < 16; i++) {
+			channel[i].process(buffer, sampleFrames);
+		}
+		for (int i = 0; i < sampleFrames; i++) {
+			outputs[0][i] += buffer[i] / 32767.0f;
+		}
+
+	}
 }
 
 
 //-----------------------------------------------------------------------------------------
 void VstKarma::processReplacing (float **inputs, float **outputs, long sampleFrames)
 {
-	float *out1 = outputs[0];
-	for (int i = 0; i < sampleFrames; i++) {
-		out1[i] = 0;
-	}
 
-	for (int i = 0; i < 16; i++) {
-		channel[i].process(outputs[0], sampleFrames);
-	}						
+	if (sampleFrames <= 44100) {
+		memset(&buffer, 0, 44100 * sizeof(int));
+		for (int i = 0; i < 16; i++) {
+			channel[i].process(buffer, sampleFrames);
+		}
+		for (int i = 0; i < sampleFrames; i++) {
+			outputs[0][i] = buffer[i] / 32767.0f;
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------------------
