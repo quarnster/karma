@@ -4,10 +4,10 @@
 #include <string.h>
 #include "D:\CODE\vst\vstsdk2.3\vstsdk2.3\source\common\audioeffectx.h"
 
-#include "Program.h"
-#include "Channel.h"
-#include "param.h"
-#include "waveform.h"
+#include "karmalib/Program.h"
+#include "karmalib/Channel.h"
+#include "karmalib/param.h"
+#include "karmalib/waveform.h"
 
 enum
 {

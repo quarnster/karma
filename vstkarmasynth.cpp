@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "vstkarma.h"
-#include "param.h"
+#include "karmalib/param.h"
 
 //const double midiScaler = (1. / 127.);
 //static float fScaler = kWaveSize / 44100.0f;
