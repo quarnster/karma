@@ -8,10 +8,15 @@ class Program {
 public:
 	float waveform1;
 	float waveform2;
-	ADSR freq1;
-	ADSR freq2;
+//	ADSR freq1;
+//	ADSR freq2;
 
+	float freq1;
+	float freq2;
 	float waveformMix;
+
+	ADSR modEnv;
+	float modEnvAmount;
 
 	LFO lfo1;
 	LFO lfo2;

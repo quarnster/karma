@@ -14,20 +14,17 @@ enum
 
 	kChannel = 0,
 	kWaveform1,
-
-	kFreq1A,
-	kFreq1D,
-	kFreq1S,
-	kFreq1R,
+	kFreq1,
 
 	kWaveform2,
 
-	kFreq2A,
-	kFreq2D,
-	kFreq2S,
-	kFreq2R,
+	kFreq2,
 
 	kWaveformMix,
+
+	kModEnvA,
+	kModEnvD,
+	kModEnvAmount,
 
 	kLFO1,
 	kLFO1rate,
