@@ -3,13 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "vstkarma.h"
-
-// *very* basic monophonic 'synth' example
-
-enum
-{
-	kWaveSize = 44100	// samples (must be power of 2 here)
-};
+#include "param.h"
 
 //const double midiScaler = (1. / 127.);
 //static float fScaler = kWaveSize / 44100.0f;
@@ -42,22 +36,25 @@ void VstKarma::initProcess ()
 //	fScaler = (float)((double)kWaveSize / 44100.);	// we don't know the sample rate yet
 }
 
-int buffer[44100];
+int bufferL[BUFFERSIZE];
+int bufferR[BUFFERSIZE];
 //-----------------------------------------------------------------------------------------
 void VstKarma::process (float **inputs, float **outputs, long sampleFrames)
 {
-	if (sampleFrames <= 44100) {
-		memset(&buffer, 0, 44100 * sizeof(int));
+	if (sampleFrames <= BUFFERSIZE) {
+		memset(&bufferL, 0, BUFFERSIZE * sizeof(int));
+		memset(&bufferR, 0, BUFFERSIZE * sizeof(int));
 		for (int i = 0; i < 16; i++) {
-			channel[i].process(buffer, sampleFrames);
+			channel[i].process(bufferL, bufferR, sampleFrames);
 		}
 		for (int i = 0; i < sampleFrames; i++) {
-			float sample = buffer[i] / 32767.0f;
-			sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;
-			outputs[0][i] += sample;
-			outputs[1][i] += sample;
+			float samplel = bufferL[i] / 32767.0f;
+			float sampler = bufferR[i] / 32767.0f;
+			samplel = samplel > 1.0f ? 1.0f : samplel < -1.0f ? -1.0f : samplel;
+			sampler = sampler > 1.0f ? 1.0f : sampler < -1.0f ? -1.0f : sampler;
+			outputs[0][i] += samplel;
+			outputs[1][i] += sampler;
 		}
-
 	}
 }
 
@@ -66,16 +63,19 @@ void VstKarma::process (float **inputs, float **outputs, long sampleFrames)
 void VstKarma::processReplacing (float **inputs, float **outputs, long sampleFrames)
 {
 
-	if (sampleFrames <= 44100) {
-		memset(&buffer, 0, 44100 * sizeof(int));
+	if (sampleFrames <= BUFFERSIZE) {
+		memset(&bufferL, 0, BUFFERSIZE * sizeof(int));
+		memset(&bufferR, 0, BUFFERSIZE * sizeof(int));
 		for (int i = 0; i < 16; i++) {
-			channel[i].process(buffer, sampleFrames);
+			channel[i].process(bufferL, bufferR, sampleFrames);
 		}
 		for (int i = 0; i < sampleFrames; i++) {
-			float sample = buffer[i] / 32767.0f;
-			sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;
-			outputs[0][i] = sample;
-			outputs[1][i] = sample;
+			float samplel = bufferL[i] / 32767.0f;
+			float sampler = bufferR[i] / 32767.0f;
+			samplel = samplel > 1.0f ? 1.0f : samplel < -1.0f ? -1.0f : samplel;
+			sampler = sampler > 1.0f ? 1.0f : sampler < -1.0f ? -1.0f : sampler;
+			outputs[0][i] = samplel;
+			outputs[1][i] = sampler;
 		}
 	}
 }
@@ -104,7 +104,7 @@ long VstKarma::processEvents (VstEvents* ev)
 //		} else if (cmd == 0xc0) { // Program change
 //			long program = midiData[1] & 0x7f;
 //			channel[chn].setProgram(&programs[program]);
-		} else if (cmd == 0xb0)	// Channel Mode Messages
+		} else if (cmd == 0xb0)	{// Channel Mode Messages
 			if (midiData[1] == 120 || midiData[1] >= 123) {
 				// 120 -> All sounds off
 				// 123->127 different all notes off (TODO: implement better)
@@ -116,8 +116,20 @@ long VstKarma::processEvents (VstEvents* ev)
 					sprintf(buf, "warning: %d, %d\n", cmd, midiData[1]);
 					Debug(buf);
 				}
+			} else if (midiData[1] == 7) { // volume change
+				channel[chn].setParameter(kGain, midiData[2]&0x7f);
+			} else if (midiData[1] == 10) { // pan change
+				channel[chn].setParameter(kPan, midiData[2]&0x7f);
+			} else if (midiData[1] == 74) { // cut off
+				channel[chn].setParameter(kFilterCut, midiData[2]&0x7f);
+			} else if (midiData[1] >= 44 && midiData[1] <= 73) {
+				channel[chn].setParameter(midiData[1] - 43, midiData[2]&0x7f);
+			} else {
+				char buf[256];
+				sprintf(buf, "unimplemented control: %d, %d\n", cmd, midiData[1]);
+				Debug(buf);
 			}
-		else {
+		} else {
 			char buf[256];
 			sprintf(buf, "other command: %d, %d\n", cmd, midiData[1]);
 			Debug(buf);
