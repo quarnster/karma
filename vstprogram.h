@@ -16,8 +16,8 @@ public:
 		amplifier.sustain = 512;
 		gain = 512;
 		channel = 1;
-		waveform1 = 0.4;
-		waveform2 = 0.4;
+		waveform1 = 0.476;
+		waveform2 = 0.476;
 		waveformMix = 0;
 	}
 };
