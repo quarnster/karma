@@ -23,11 +23,14 @@ Channel::Channel() {
 }
 
 //-----------------------------------------------------------------------------------------
-float Channel::getSample(float wave, float phase) {
+inline float getSample(float wave, float phase) {
 	float limit = 44100;
 	float pl = phase / limit;
 	float sample = -1 + (2 * (pl));
-	if (wave < 0.2) {				// tri
+	if (wave < 0.2) {				// sin
+		return sinf(sample * 3.1415927f);
+	}
+	else if (wave < 0.4) {			// tri
 		if (pl > 0.75) {
 			sample = -1 + (pl - 0.75) * 4;
 		} else if (pl < 0.25) {
@@ -37,12 +40,10 @@ float Channel::getSample(float wave, float phase) {
 		}
 		return sample;
 	}
-	else if (wave < 0.4)				// saw
+	else if (wave < 0.6)				// saw
 		return sample;
-	else if (wave < 0.6)				// square
+	else if (wave < 0.8)				// square
 		return sample > 0 ? 1.0f : -1.0f;
-	else if (wave < 0.8)				// sine
-		return sinf(sample * 3.1415927f * 2);
 	else						// noise
 		return (float) (2 * (((rand() % 1000) / 1000.0f)- 0.5f));
 }
@@ -57,8 +58,8 @@ void Channel::process(float *out1, long frames) {
 			float lfo1 = getSample(program->lfo1.waveform, program->lfo1.fPhase) * program->lfo1.amount * 80;
 			float lfo2 = getSample(program->lfo2.waveform, program->lfo2.fPhase) * program->lfo2.amount * 1024;
 
-			float freq1 = noteFreq * program->freq1.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;	// not really linear...
-			float freq2 = noteFreq * program->freq2.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;
+			float freq1 = noteFreq * (1 + program->freq1) + lfo1; //.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;	// not really linear...
+			float freq2 = noteFreq * (1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample)) + lfo1;
 	//		float gain = (float)(program->gain /** (double)currentVelocity*/ /** midiScaler*/);
 
 			if (note[i].delta >= 0)
@@ -73,7 +74,7 @@ void Channel::process(float *out1, long frames) {
 			float f = (float) (2 * sin(3.1415927f * cut / 44100));
 			float q = res;
 			float scale = res;
-			float dist = (program->distortion*20);
+			float dist = 1 + (program->distortion*20);
 
 			// loop
 			while (--sampleFrames >= 0)
@@ -108,7 +109,7 @@ void Channel::process(float *out1, long frames) {
 				q = res;
 				scale = res;
 
-				if (dist > 0.0) {
+				if (dist > 1.0) {
 					sample *= dist;
 					float clamp = 1; //vol1 > vol2 ? vol1 : vol2;
 					sample = sample > clamp ? clamp : sample < -clamp ? -clamp : sample;
@@ -133,8 +134,8 @@ void Channel::process(float *out1, long frames) {
 				note[i].samplesPlayed++;
 				lfo1 = getSample(program->lfo1.waveform, program->lfo1.fPhase) * program->lfo1.amount * 80;
 				lfo2 = getSample(program->lfo2.waveform, program->lfo2.fPhase) * program->lfo2.amount * 1024;
-				freq1 = noteFreq * program->freq1.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;
-				freq2 = noteFreq * program->freq2.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;
+				freq1 = noteFreq * (1 + program->freq1) + lfo1; //.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;
+				freq2 = noteFreq * (1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample)) + lfo1;
 
 				if (vol < 0.01 && note[i].released) {
 					// this notes volume is too low to hear and the note has been released
@@ -164,12 +165,13 @@ void Channel::process(float *out1, long frames) {
 void Channel::noteOn(long notenum, long velocity, long delta)
 {
 	if (program == NULL) {
-		VstKarma::Debug("program == null");
+		VstKarma::Debug("program == null\n");
 		return;
 	}
 
 	if (playing_notes == MAX_NOTES) {
-		VstKarma::Debug("Maximum number of notes allready playing");
+		VstKarma::Debug("Maximum number of notes allready playing\n");
+		return;
 	}
 
 	note[playing_notes].fPhase1 = note[playing_notes].fPhase2 = 0;

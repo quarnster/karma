@@ -27,7 +27,6 @@ protected:
 	long currentVelocity;
 //	long currentDelta;
 
-	float getSample(float wave, float phase);
 
 public:
 	karma_Note note[MAX_NOTES];
