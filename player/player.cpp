@@ -50,9 +50,6 @@ void	fillNextBuffer() {
 	if (m_waveHeader[m_currentBuffer].dwFlags&WHDR_PREPARED)
 		waveOutUnprepareHeader(m_hWaveOut,&m_waveHeader[m_currentBuffer],sizeof(WAVEHDR));
 
-	// Call the user function to fill the buffer with anything you want ! :-)
-//	int *buf = (int*) (&soundBuffer[2 * BUFFERSIZE2 * m_currentBuffer]);
-
 
 	while (currentEvent && (currentEvent->time - samplesPlayed) <= BUFFERSIZE2) {
 		int chn = currentEvent->data[0] & 0xf;
@@ -169,121 +166,12 @@ void addEvent(MidiEvent *e) {
 		ev->next = e;
 	}
 }
-/*
-int read4bytes(FILE *fp) {
-	int tmp1 = fgetc(fp);
-	int tmp2 = fgetc(fp);
-	int tmp3 = fgetc(fp);
-	int tmp4 = fgetc(fp);
-
-//	printf("read: %d, %d, %d, %d\n", tmp1, tmp2, tmp3, tmp4);
-	return  tmp1 << 24 | tmp2  << 16 | tmp3  << 8 | tmp4;
-}
-int read2bytes(FILE *fp) {
-	return fgetc(fp) << 8 | fgetc(fp);
-}
-
-int readVarInt(FILE *fp) {
-	int ret = 0;
-	int tmp = 0;
-	do {
-		tmp = fgetc(fp);
-		ret = (ret << 7) | (tmp & 0x7F);
-	} while (tmp & 0x80);
-	return ret;
-}
-*/
 union fConvert {
 	int ival;
 	float fval;
 };
-/*
-void readFile(char *file) {
-	FILE *fp = NULL;
-	if ((fp = fopen(file, "rb")) == NULL) {
-		printf("File %s could not be opened\n");
-		return;
-	}
 
-	// read instruments
-	for (int i = 0; i < 16; i++) {
-		fConvert f;
-		for (int j = 0; j < 34; j++) {
-			f.ival = read4bytes(fp);
-			karma_Program_setParameter(&channel[i].program, j, f.fval);
-		}
-	}
 
-	// read midi-data
-	int timeformat = read2bytes(fp);
-	int eventNum = read2bytes(fp);
-	int usedChannels = fgetc(fp);
-
-	float samplesPerTick = (60.0 / 120.0 * 44100.0) / (float) timeformat;
-
-	printf("timeformat: %d\n", timeformat);
-	printf("eventNum: %d\n", eventNum);
-	printf("usedChannels: %d\n", usedChannels);
-
-	while (eventNum) {
-		long lastTime = 0;
-		float fraction = 0;
-
-		int num = read2bytes(fp);
-		MidiEvent *root = NULL;
-		MidiEvent *e = root;
-
-		printf("num: %d\n", num);
-
-		for (int i = 0; i < num; i++) {
-			
-			MidiEvent *ne = (MidiEvent*) malloc(sizeof(MidiEvent));
-			ne->time = readVarInt(fp);
-
-			if (ne->time > 0) {
-				float samples = ne->time * samplesPerTick + fraction;
-				ne->time = (long) samples;
-				fraction = samples - ne->time;
-			}
-
-			ne->time += lastTime;
-
-			lastTime = ne->time;
-
-			if (!root) {
-				e = root = ne;
-			}
-			e->next = ne;
-			e = e->next;
-		}
-
-		int pos = 1;
-		root->data[0] = fgetc(fp);
-		if ((root->data[0] & 0xf0) == 0xb0) {
-			root->data[1] = fgetc(fp)&0x7f;
-			pos++;
-		}
-
-		char last = 0;
-
-		e = root;
-		for (int i = 0; i < num; i++) {
-			e->data[0] = root->data[0];
-			e->data[1] = root->data[1];
-
-			char curr = fgetc(fp) + last;
-			e->data[pos] = curr&0x7f;
-			last = e->data[pos];
-
-			MidiEvent *tmp = e;
-			e = e->next;
-			addEvent(tmp);
-		}
-		eventNum -= num;
-	}
-	fclose(fp);
-}
-*/
 void readData() {
 	int pos = 0;
 	// read instruments
@@ -391,14 +279,11 @@ int main(int argc, char **argv)
 		karma_Channel_free(&channel[i]);
 	}
 
-	i = 0;
 	while (event) {
 		MidiEvent *e = event;
 		event = event->next;
 		free(e);
-		i++;
 	}
-	printf("freed %d events\n", i);
 
 	return 0;
 }
