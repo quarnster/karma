@@ -1,13 +1,14 @@
-//------------------------------------------------------------------------
-//-
-//- Project     : Use different Controls of VSTGUI
-//- Filename    : VstKarmaEditor.cpp
-//- Created by  : Yvan Grabit
-//- Description :
-//-
-//- © 2000-1999, Steinberg Soft und Hardware GmbH, All Rights Reserved
-//------------------------------------------------------------------------
-
+/*
+ * Vst plugin for the Karma softsynth
+ * 
+ * $Id: vstkarmaeditor.cpp,v 1.2 2004/01/01 16:06:19 Fredrik Ehnbom Exp $
+ * Author : Fredrik Ehnbom
+ * 
+ * All rights reserved. Reproduction, modification, use or disclosure
+ * to third parties without express authority is forbidden.
+ * Copyright © Outbreak, Sweden, 2003, 2004.
+ *
+ */
 #include "vstkarmaeditor.h"
 
 

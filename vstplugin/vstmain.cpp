@@ -1,9 +1,14 @@
-/*-----------------------------------------------------------------------------
-
-© 1999, Steinberg Soft und Hardware GmbH, All Rights Reserved
-
------------------------------------------------------------------------------*/
-
+/*
+ * Vst plugin for the Karma softsynth
+ * 
+ * $Id: vstmain.cpp,v 1.2 2004/01/01 16:06:20 Fredrik Ehnbom Exp $
+ * Author : Fredrik Ehnbom
+ * 
+ * All rights reserved. Reproduction, modification, use or disclosure
+ * to third parties without express authority is forbidden.
+ * Copyright © Outbreak, Sweden, 2003, 2004.
+ *
+ */
 #include <stddef.h>
 #include "vstkarma.h"
 

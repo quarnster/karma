@@ -1,3 +1,14 @@
+/*
+ * Vst plugin for the Karma softsynth
+ * 
+ * $Id: vstkarma.cpp,v 1.2 2004/01/01 16:06:19 Fredrik Ehnbom Exp $
+ * Author : Fredrik Ehnbom
+ * 
+ * All rights reserved. Reproduction, modification, use or disclosure
+ * to third parties without express authority is forbidden.
+ * Copyright © Outbreak, Sweden, 2003, 2004.
+ *
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
