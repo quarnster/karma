@@ -4,35 +4,45 @@
 #include <math.h>
 #include <windows.h>
 #include <stdio.h>
+#include <conio.h>
+#include "song.h"
 // #include <winmm.h>
-#include "MidiPlayer.h"
+// #include "MidiPlayer.h"
 
 #include "../karmalib/waveform.h"
 #include "../karmalib/Channel.h"
+#include "../karmalib/param.h"
 
 #define REPLAY_NBSOUNDBUFFER  3
-#define BUFFERSIZE  4096
+#define BUFFERSIZE2  4096
 
 int m_currentBuffer = 0;
 WAVEHDR m_waveHeader[REPLAY_NBSOUNDBUFFER];
 HWAVEOUT m_hWaveOut;
 bool closing = false;
-short soundBuffer[BUFFERSIZE * 2 * REPLAY_NBSOUNDBUFFER];
+short soundBuffer[BUFFERSIZE2 * 2 * REPLAY_NBSOUNDBUFFER];
 int tmp = 0;
 
 int samplesPlayed = 0;
 
 #ifdef __GNUC__
-static int bufferL[BUFFERSIZE] __attribute__((aligned(32)));
-static int bufferR[BUFFERSIZE] __attribute__((aligned(32)));
+static int bufferL[BUFFERSIZE2] __attribute__((aligned(32)));
+static int bufferR[BUFFERSIZE2] __attribute__((aligned(32)));
 #else
-static __declspec(align(32)) int bufferL[BUFFERSIZE];
-static __declspec(align(32)) int bufferR[BUFFERSIZE];
+static __declspec(align(32)) int bufferL[BUFFERSIZE2];
+static __declspec(align(32)) int bufferR[BUFFERSIZE2];
 #endif
 
-int phase = 0;
+struct MidiEvent {
+	MidiEvent *next;
+	long time;
+	unsigned char data[3];
+};
+
 karma_Channel channel[16];
 MidiEvent *currentEvent;
+MidiEvent *event;
+
 // Internal WaveOut API callback function. We just call our sound handler ("playNextBuffer")
 void	fillNextBuffer() {
 	if (closing) return;
@@ -41,12 +51,16 @@ void	fillNextBuffer() {
 		waveOutUnprepareHeader(m_hWaveOut,&m_waveHeader[m_currentBuffer],sizeof(WAVEHDR));
 
 	// Call the user function to fill the buffer with anything you want ! :-)
-//	int *buf = (int*) (&soundBuffer[2 * BUFFERSIZE * m_currentBuffer]);
+//	int *buf = (int*) (&soundBuffer[2 * BUFFERSIZE2 * m_currentBuffer]);
 
-	while (currentEvent && (currentEvent->time - samplesPlayed) <= BUFFERSIZE) {
+
+	while (currentEvent && (currentEvent->time - samplesPlayed) <= BUFFERSIZE2) {
 		int chn = currentEvent->data[0] & 0xf;
 		int cmd = currentEvent->data[0] & 0xf0;
 
+		if (cmd == 0x90) {
+			currentEvent->data[2] = 64;
+		}
 		if (cmd == 0xb0 && (currentEvent->data[1] == 120 || currentEvent->data[1] >= 123)) {
 			for (int i = 0; i < 16; i++)
 				karma_Channel_allNotesOff(&channel[i]);
@@ -56,20 +70,19 @@ void	fillNextBuffer() {
 			kevent.data[1] = currentEvent->data[1];
 			kevent.data[2] = currentEvent->data[2];
 			kevent.deltaFrames = currentEvent->time - samplesPlayed;
-
 			karma_Channel_addEvent(&channel[chn], &kevent);
 		}
 		currentEvent = currentEvent->next;
 	}
-	memset(&bufferL, 0, BUFFERSIZE * sizeof(int));
-	memset(&bufferR, 0, BUFFERSIZE * sizeof(int));
+	memset(&bufferL, 0, BUFFERSIZE2 * sizeof(int));
+	memset(&bufferR, 0, BUFFERSIZE2 * sizeof(int));
 
 	for (int i = 0; i < 16; i++) {
-		karma_Channel_process(&channel[i], bufferL, bufferR, BUFFERSIZE);
+		karma_Channel_process(&channel[i], bufferL, bufferR, BUFFERSIZE2);
 	}
 
-	int pos = m_currentBuffer * BUFFERSIZE * 2;
-	for (int i = 0; i < BUFFERSIZE; i++) {
+	int pos = m_currentBuffer * BUFFERSIZE2 * 2;
+	for (int i = 0; i < BUFFERSIZE2; i++) {
 		int samplel = bufferL[i];
 		int sampler = bufferR[i];
 
@@ -81,8 +94,8 @@ void	fillNextBuffer() {
 	}
 
 	// Prepare the buffer to be sent to the WaveOut API
-	m_waveHeader[m_currentBuffer].lpData = (LPSTR) (&soundBuffer[2 * BUFFERSIZE * m_currentBuffer]);
-	m_waveHeader[m_currentBuffer].dwBufferLength = BUFFERSIZE*2*2;
+	m_waveHeader[m_currentBuffer].lpData = (LPSTR) (&soundBuffer[2 * BUFFERSIZE2 * m_currentBuffer]);
+	m_waveHeader[m_currentBuffer].dwBufferLength = BUFFERSIZE2*2*2;
 	waveOutPrepareHeader(m_hWaveOut,&m_waveHeader[m_currentBuffer],sizeof(WAVEHDR));
 
 	// Send the buffer the the WaveOut queue
@@ -90,7 +103,7 @@ void	fillNextBuffer() {
 
 	m_currentBuffer++;
 	if (m_currentBuffer >= REPLAY_NBSOUNDBUFFER) m_currentBuffer = 0;
-	samplesPlayed += BUFFERSIZE;
+	samplesPlayed += BUFFERSIZE2;
 }
 
 static void CALLBACK waveOutProc(HWAVEOUT hwo,UINT uMsg,DWORD dwInstance,DWORD dwParam1,DWORD dwParam2)
@@ -142,110 +155,250 @@ void close() {
 	waveOutClose(m_hWaveOut);
 
 }
+void addEvent(MidiEvent *e) {
+	if (!event || event->time > e->time) {
+		// first element
+		e->next = event;
+		event = e;
+	} else {
+		MidiEvent *ev = event;
+		while (ev->next && ev->next->time <= e->time) {
+			ev = ev->next;
+		}
+		e->next = ev->next;
+		ev->next = e;
+	}
+}
+/*
+int read4bytes(FILE *fp) {
+	int tmp1 = fgetc(fp);
+	int tmp2 = fgetc(fp);
+	int tmp3 = fgetc(fp);
+	int tmp4 = fgetc(fp);
 
-#define cMagic 		'CcnK'
-#define fMagic		'FxCk'
-#define bankMagic	'FxBk'
+//	printf("read: %d, %d, %d, %d\n", tmp1, tmp2, tmp3, tmp4);
+	return  tmp1 << 24 | tmp2  << 16 | tmp3  << 8 | tmp4;
+}
+int read2bytes(FILE *fp) {
+	return fgetc(fp) << 8 | fgetc(fp);
+}
 
+int readVarInt(FILE *fp) {
+	int ret = 0;
+	int tmp = 0;
+	do {
+		tmp = fgetc(fp);
+		ret = (ret << 7) | (tmp & 0x7F);
+	} while (tmp & 0x80);
+	return ret;
+}
+*/
 union fConvert {
 	int ival;
 	float fval;
 };
-
-extern int read4bytes(FILE *fp);
-void readChunk(FILE *in, karma_Channel *chn) {
-	int header = read4bytes(in);
-	int length = read4bytes(in);
-
-	char buffer[512];
-	if (header !=  cMagic) {
-		printf("ERROR!!! header != cMagic!!\n");
-		printf("%d, %d\n", header, cMagic);
+/*
+void readFile(char *file) {
+	FILE *fp = NULL;
+	if ((fp = fopen(file, "rb")) == NULL) {
+		printf("File %s could not be opened\n");
 		return;
 	}
 
-	int header2 = read4bytes(in);
-	switch (header2) {
-		case bankMagic:
-			{
-				fseek(in, 3*4, SEEK_CUR);
-				int programs = read4bytes(in);
+	// read instruments
+	for (int i = 0; i < 16; i++) {
+		fConvert f;
+		for (int j = 0; j < 34; j++) {
+			f.ival = read4bytes(fp);
+			karma_Program_setParameter(&channel[i].program, j, f.fval);
+		}
+	}
 
-				fseek(in, 128, SEEK_CUR);
+	// read midi-data
+	int timeformat = read2bytes(fp);
+	int eventNum = read2bytes(fp);
+	int usedChannels = fgetc(fp);
 
-				for (int i = 0; i < programs; i++) {
-					printf("%d", &channel[i]);
-					readChunk(in, &channel[i]);
-				}
-			}
-			break;
-		case fMagic:
-			{
-				fseek(in, 3*4, SEEK_CUR);
-				int params = read4bytes(in);
-				fseek(in, 28, SEEK_CUR);
+	float samplesPerTick = (60.0 / 120.0 * 44100.0) / (float) timeformat;
 
-				fConvert f;
-				for (int i = 0; i < params; i++) {
-					f.ival = read4bytes(in);
-					karma_Program_setParameter(&chn->program, i, f.fval);
-				}
-			}
-			break;
-		default:
-			printf("ERROR!!! Unknown chunk: %d\n", header);
-			printf("len: %d\n", length);
+	printf("timeformat: %d\n", timeformat);
+	printf("eventNum: %d\n", eventNum);
+	printf("usedChannels: %d\n", usedChannels);
+
+	while (eventNum) {
+		long lastTime = 0;
+		float fraction = 0;
+
+		int num = read2bytes(fp);
+		MidiEvent *root = NULL;
+		MidiEvent *e = root;
+
+		printf("num: %d\n", num);
+
+		for (int i = 0; i < num; i++) {
 			
+			MidiEvent *ne = (MidiEvent*) malloc(sizeof(MidiEvent));
+			ne->time = readVarInt(fp);
 
-			fseek(in, length - 4, SEEK_CUR);
-			break;
+			if (ne->time > 0) {
+				float samples = ne->time * samplesPerTick + fraction;
+				ne->time = (long) samples;
+				fraction = samples - ne->time;
+			}
 
+			ne->time += lastTime;
+
+			lastTime = ne->time;
+
+			if (!root) {
+				e = root = ne;
+			}
+			e->next = ne;
+			e = e->next;
+		}
+
+		int pos = 1;
+		root->data[0] = fgetc(fp);
+		if ((root->data[0] & 0xf0) == 0xb0) {
+			root->data[1] = fgetc(fp)&0x7f;
+			pos++;
+		}
+
+		char last = 0;
+
+		e = root;
+		for (int i = 0; i < num; i++) {
+			e->data[0] = root->data[0];
+			e->data[1] = root->data[1];
+
+			char curr = fgetc(fp) + last;
+			e->data[pos] = curr&0x7f;
+			last = e->data[pos];
+
+			MidiEvent *tmp = e;
+			e = e->next;
+			addEvent(tmp);
+		}
+		eventNum -= num;
+	}
+	fclose(fp);
+}
+*/
+void readData() {
+	int pos = 0;
+	// read instruments
+	for (int i = 0; i < 16; i++) {
+		fConvert f;
+		for (int j = 0; j < 34; j++) {
+			f.ival = song[pos] << 24 |  song[pos+1] << 16 | song[pos+2] << 8 | song[pos+3] << 0;
+			pos += 4;
+			karma_Program_setParameter(&channel[i].program, j, f.fval);
+		}
+	}
+
+	// read midi-data
+	int timeformat = song[pos] << 8 | song[pos+1] << 0; pos += 2;
+	int eventNum = song[pos] << 8 | song[pos+1] << 0; pos += 2;
+
+	float samplesPerTick = (60.0 / 120.0 * 44100.0) / (float) timeformat;
+
+	while (eventNum) {
+		long lastTime = 0;
+		float fraction = 0;
+
+		int num = song[pos] << 8 | song[pos+1] << 0; pos += 2;
+		MidiEvent *root = NULL;
+		MidiEvent *e = root;
+
+		for (int i = 0; i < num; i++) {
+			
+			MidiEvent *ne = (MidiEvent*) malloc(sizeof(MidiEvent));
+			ne->time = 0;
+			int tmp = 0;
+			do {
+				tmp = song[pos]; pos++;
+				ne->time = (ne->time << 7) | (tmp & 0x7F);
+			} while (tmp & 0x80);
+
+			if (ne->time > 0) {
+				float samples = ne->time * samplesPerTick + fraction;
+				ne->time = (long) samples;
+				fraction = samples - ne->time;
+			}
+
+			ne->time += lastTime;
+
+			lastTime = ne->time;
+
+			if (!root) {
+				e = root = ne;
+			}
+			e->next = ne;
+			e = e->next;
+		}
+
+		int var = 1;
+		root->data[0] = song[pos]; pos++;
+		if ((root->data[0] & 0xf0) == 0xb0) {
+			root->data[1] = song[pos]&0x7f; pos++;
+			var++;
+		}
+		char last = 0;
+
+		e = root;
+		for (int i = 0; i < num; i++) {
+			e->data[0] = root->data[0];
+			e->data[1] = root->data[1];
+
+			char curr = song[pos] + last; pos++;
+			e->data[var] = curr&0x7f;
+			last = e->data[var];
+
+			MidiEvent *tmp = e;
+			e = e->next;
+			addEvent(tmp);
+		}
+		eventNum -= num;
 	}
 }
-void readSettings(char *file) {
-	FILE *in = NULL;
-	if ((in = fopen(file, "rb")) == NULL) {
-		printf("file %s could not be opened\n", file);
-		return;
-	}
 
-	readChunk(in, NULL);
-	fclose(in);
-}
 int main(int argc, char **argv)
 {
-/*
-	karma_Channel c;
-	karma_Channel_init(&c);
-	karma_Waveform_initTables();
-
-	open();
-	getchar();
-	close();
-*/
-	if (argc != 3) {
-		printf("usage: %s file.mid file.fxb\n", argv[0]);
+	if (argc != 1) {
+		printf("usage: %s (that wasn't so hard now was it?)\n", argv[0]);
 		return 0;
 	}
 
 	karma_Waveform_initTables();
-	for (int i = 0; i < 16; i++) {
-		printf("addr: %d\n", &channel[i]);
+	int i = 0;
+
+	for (i = 0; i < 16; i++) {
 		karma_Channel_init(&channel[i]);
 	}
-	readSettings(argv[2]);
+	readData();
 
-	MidiPlayer m(argv[1]);
-	currentEvent = m.event;
+	currentEvent = event;
+
 
 	open();
 
-	getchar();
+	getch();
+
 	close();
 
-	for (int i = 0; i < 16; i++) {
+
+	for (i = 0; i < 16; i++) {
 		karma_Channel_free(&channel[i]);
 	}
+
+	i = 0;
+	while (event) {
+		MidiEvent *e = event;
+		event = event->next;
+		free(e);
+		i++;
+	}
+	printf("freed %d events\n", i);
 
 	return 0;
 }
