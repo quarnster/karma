@@ -831,7 +831,7 @@ void VstKarmaEditor::valueChanged (CDrawContext* context, CControl* control)
 				CKickButton *b = (CKickButton*) control;
 				if (b->getValue() == 0) {
 					float val = effect->getParameter(tag);
-					val += 0.219;
+					val += 0.25;
 					if (val > 1) val = 0;
 					effect->setParameter(tag, val);
 				}
@@ -845,7 +845,7 @@ void VstKarmaEditor::valueChanged (CDrawContext* context, CControl* control)
 				CKickButton *b = (CKickButton*) control;
 				if (b->getValue() == 0) {
 					float val = effect->getParameter(tag);
-					val += 0.219;
+					val += 0.25;
 					if (val > 1) val = 0;
 					effect->setParameter(tag, val);
 				}

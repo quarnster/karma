@@ -39,7 +39,7 @@ VstKarma::VstKarma(audioMasterCallback audioMaster) : AudioEffectX (audioMaster,
 		setNumOutputs(kNumOutputs);		// 2 output
 		canProcessReplacing();
 		hasVu(false);
-		hasClip(false);
+		hasClip(true);
 		isSynth();
 		setUniqueID('OTBk');	// <<<! *must* change this!!!!
 	}
@@ -65,20 +65,20 @@ void VstKarma::setProgram (long program)
 	currentProgramIndex = program;
 
 	setParameter(kChannel,		currentProgram->fChannel);
-	setParameter(kWaveform1,	currentProgram->waveform1);
+	setParameter(kWaveform1,	(currentProgram->waveform1 / 4.0f));
 	setParameter(kFreq1,		(currentProgram->freq1/2.0)+0.5f);
 	setParameter(kWaveLen1,		(currentProgram->wavelen1 / 4096.0f));
-	setParameter(kWaveform2,	currentProgram->waveform2);
+	setParameter(kWaveform2,	(currentProgram->waveform2 / 4.0f));
 	setParameter(kFreq2,		(currentProgram->freq2/2.0)+0.5f);
 	setParameter(kWaveLen2,		(currentProgram->wavelen2 / 4096.0f));
 	setParameter(kWaveformMix,	(currentProgram->waveformMix / 1024.0f));
 	setParameter(kModEnvA,		(currentProgram->modEnv.attack / (44100 * 2.0f)));
 	setParameter(kModEnvD,		(currentProgram->modEnv.decay / (44100 * 2.0f)));
 	setParameter(kModEnvAmount,	(currentProgram->modEnvAmount/2.0)+0.5f);
-	setParameter(kLFO1,		currentProgram->lfo1.waveform);
+	setParameter(kLFO1,		(currentProgram->lfo1.waveform / 4.0f));
 	setParameter(kLFO1rate,		currentProgram->lfo1.rate);
 	setParameter(kLFO1amount,	currentProgram->lfo1.amount/ (1024.0f * 80.0f));
-	setParameter(kLFO2,		currentProgram->lfo2.waveform);
+	setParameter(kLFO2,		(currentProgram->lfo2.waveform/4.0f));
 	setParameter(kLFO2rate,		currentProgram->lfo2.rate);
 	setParameter(kLFO2amount,	currentProgram->lfo2.amount / (1024.0f * 1024.0f));
 	setParameter(kFilterType,	currentProgram->filter);
@@ -335,20 +335,20 @@ void VstKarma::setParameter (long index, float value)
 
 */
 			break;
-		case kWaveform1:	currentProgram->waveform1	= value;	break;
+		case kWaveform1:	currentProgram->waveform1	= (int) (value*4.0f);	break;
 		case kFreq1:		currentProgram->freq1		= (value*2)-1;	break;
 		case kFreq2:		currentProgram->freq2		= (value*2)-1;	break;
-		case kWaveform2:	currentProgram->waveform2	= value;	break;
+		case kWaveform2:	currentProgram->waveform2	= (int) (value*4.0f);	break;
 		case kWaveLen1:		currentProgram->wavelen1	= value*4096;	break;
 		case kWaveLen2:		currentProgram->wavelen2	= value*4096;	break;
 		case kModEnvA:		currentProgram->modEnv.attack	= (int)(value*44100*2);	break;
 		case kModEnvD:		currentProgram->modEnv.decay	= (int)(value*44100*2);	break;
 		case kModEnvAmount:	currentProgram->modEnvAmount	= (value*2)-1;	break;
 		case kWaveformMix:	currentProgram->waveformMix	= (int) (value * 1024);	break;
-		case kLFO1:		currentProgram->lfo1.waveform	= value;	break;
+		case kLFO1:		currentProgram->lfo1.waveform	= (int) (value*4.0f);	break;
 		case kLFO1amount:	currentProgram->lfo1.amount	= (int) (value * (1024.0f * 80.0f));	break;
 		case kLFO1rate:		currentProgram->lfo1.rate	= value;	break;
-		case kLFO2:		currentProgram->lfo2.waveform	= value;	break;
+		case kLFO2:		currentProgram->lfo2.waveform	= (int) (value*4.0f);	break;
 		case kLFO2amount:	currentProgram->lfo2.amount	= (int) (value * (1024.0f * 1024.0f));	break;
 		case kLFO2rate:		currentProgram->lfo2.rate	= value;	break;
 		case kFilterType:	currentProgram->filter		= value;	break;
@@ -386,20 +386,20 @@ float VstKarma::getParameter (long index)
 	switch (index)
 	{
 		case kChannel:		value = currentProgram->fChannel;		break;
-		case kWaveform1:	value = currentProgram->waveform1;		break;
+		case kWaveform1:	value = (currentProgram->waveform1 / 4.0f);		break;
 		case kFreq1:		value = (currentProgram->freq1/2.0)+0.5f;	break;
 		case kFreq2:		value = (currentProgram->freq2/2.0)+0.5f;	break;
 		case kWaveLen1:		value = currentProgram->wavelen1 / 4096.0f;	break;
 		case kWaveLen2:		value = currentProgram->wavelen2 / 4096.0f;	break;
-		case kWaveform2:	value = currentProgram->waveform2;		break;
+		case kWaveform2:	value = (currentProgram->waveform2 / 4.0f);		break;
 		case kModEnvA:		value = (currentProgram->modEnv.attack / (44100*2.0f));		break;
 		case kModEnvD:		value = (currentProgram->modEnv.decay / (44100*2.0f));		break;
 		case kModEnvAmount:	value = (currentProgram->modEnvAmount/2.0)+0.5f;break;
 		case kWaveformMix:	value = (currentProgram->waveformMix / 1024.0f);		break;
-		case kLFO1:		value = currentProgram->lfo1.waveform;		break;
+		case kLFO1:		value = (currentProgram->lfo1.waveform / 4.0f);		break;
 		case kLFO1amount:	value = currentProgram->lfo1.amount / (1024.0f * 80.0f);		break;
 		case kLFO1rate:		value = currentProgram->lfo1.rate;		break;
-		case kLFO2:		value = currentProgram->lfo2.waveform;		break;
+		case kLFO2:		value = (currentProgram->lfo2.waveform / 4.0f);		break;
 		case kLFO2amount:	value = currentProgram->lfo2.amount / (1024.0f * 1024.0f);		break;
 		case kLFO2rate:		value = currentProgram->lfo2.rate;		break;
 		case kFilterType:	value = currentProgram->filter;			break;
