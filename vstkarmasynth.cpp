@@ -99,54 +99,19 @@ long VstKarma::processEvents (VstEvents* ev)
 		long cmd = midiData[0] & 0xf0;		// extract command
 		long chn = midiData[0] & 0x0f;		// extract channel
 
-		if (cmd == 0x90 || cmd == 0x80)	{	// note on / note off
-			long note = midiData[1] & 0x7f;
-			long velocity = midiData[2] & 0x7f;
-			if (cmd == 0x80)
-				velocity = 0;
-			if (!velocity/* && (note == channel[chn].currentNote)*/)
-				karma_Channel_noteOff(&channel[chn], note);	// note off by velocity 0
-			else
-				karma_Channel_noteOn(&channel[chn], note, velocity, event->deltaFrames);
-		} else if (cmd == 0xb0)	{// Channel Mode Messages
-			if (event->deltaFrames) {
-				char buf[256];
-				sprintf(buf, "warning: %d, %d\n", midiData[1], event->deltaFrames);
-				Debug(buf);
-			}
-
-			if (midiData[1] == 120 || midiData[1] >= 123) {
-				// 120 -> All sounds off
-				// 123->127 different all notes off (TODO: implement better)
-				for (int i = 0; i < 16; i++)
-					karma_Channel_allNotesOff(&channel[i]);
-
-				if (midiData[1] > 123) {
-					char buf[256];
-					sprintf(buf, "warning: %d, %d\n", cmd, midiData[1]);
-					Debug(buf);
-				}
-			} else if (midiData[1] == 7) { // volume change
-				karma_Program_setParameter(&channel[chn].program, kGain, (midiData[2]&0x7f) / 127.0f);
-			} else if (midiData[1] == 10) { // pan change
-				float value = (midiData[2]&0x7f) / 127.0f;
-				channel[chn].panl = sqrt(1.0f-value) * 1024;
-				channel[chn].panl = sqrt(value) * 1024;
-//				karma_Program_setParameter(&channel[chn].program, kPan, (midiData[2]&0x7f) / 127.0f);
-			} else if (midiData[1] == 74) { // cut off
-				karma_Program_setParameter(&channel[chn].program, kFilterCut, (midiData[2]&0x7f) / 127.0f);
-			} else if (midiData[1] >= 12) {
-				karma_Program_setParameter(&channel[chn].program, midiData[1] - 12, (midiData[2]&0x7f) / 127.0f);
-			} else {
-				char buf[256];
-				sprintf(buf, "unimplemented control: %d, %d\n", cmd, midiData[1]);
-				Debug(buf);
-			}
+		karma_Event kevent;
+		kevent.data[0] = midiData[0];
+		kevent.data[1] = midiData[1];
+		kevent.data[2] = midiData[2];
+		kevent.deltaFrames = event->deltaFrames;
+		if (cmd == 0xb0 && (midiData[1] == 120 || midiData[1] >= 123)) {
+			VstKarma::Debug("all notes off\n");
+			for (int i = 0; i < 16; i++)
+				karma_Channel_allNotesOff(&channel[i]);
 		} else {
-			char buf[256];
-			sprintf(buf, "other command: %d, %d\n", cmd, midiData[1]);
-			Debug(buf);
+			karma_Channel_addEvent(&channel[chn], &kevent);
 		}
+
 		event++;
 	}
 	return 1;	// want more
