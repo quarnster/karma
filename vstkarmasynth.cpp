@@ -36,8 +36,14 @@ void VstKarma::initProcess ()
 //	fScaler = (float)((double)kWaveSize / 44100.);	// we don't know the sample rate yet
 }
 
-int bufferL[BUFFERSIZE];
-int bufferR[BUFFERSIZE];
+#ifdef __GNUC__
+static int bufferL[BUFFERSIZE] __attribute__((aligned(32)));
+static int bufferR[BUFFERSIZE] __attribute__((aligned(32)));
+#else
+static __declspec(align(32)) int bufferL[BUFFERSIZE];
+static __declspec(align(32)) int bufferR[BUFFERSIZE];
+#endif
+
 //-----------------------------------------------------------------------------------------
 void VstKarma::process (float **inputs, float **outputs, long sampleFrames)
 {
@@ -102,9 +108,6 @@ long VstKarma::processEvents (VstEvents* ev)
 				channel[chn].noteOff(note);	// note off by velocity 0
 			else
 				channel[chn].noteOn(note, velocity, event->deltaFrames);
-//		} else if (cmd == 0xc0) { // Program change
-//			long program = midiData[1] & 0x7f;
-//			channel[chn].setProgram(&programs[program]);
 		} else if (cmd == 0xb0)	{// Channel Mode Messages
 			if (midiData[1] == 120 || midiData[1] >= 123) {
 				// 120 -> All sounds off
@@ -139,31 +142,3 @@ long VstKarma::processEvents (VstEvents* ev)
 	}
 	return 1;	// want more
 }
-/*
-//-----------------------------------------------------------------------------------------
-void VstKarma::noteOn(long note, long velocity, long delta)
-{
-	channel[i].fPhase1 = channel[i].fPhase2 = 0;
-	channel[i].currentNote = note;
-	channel[i].currentVelocity = velocity;
-	channel[i].currentDelta = delta;
-	channel[i].noteIsOn = true;
-	channel[i].samplesPlayed = 0;
-	high = band = low = notch = 0;
-	channel[i].freq1.triggerKey();
-	channel[i].volume1.triggerKey();
-	channel[i].freq2.triggerKey();
-	channel[i].volume2.triggerKey();
-	channel[i].active = true;
-}
-
-//-----------------------------------------------------------------------------------------
-void VstKarma::noteOff() {
-	channel[i].noteIsOn = false;
-	channel[i].freq1.releaseKey();
-	channel[i].volume1.releaseKey();
-	channel[i].freq2.releaseKey();
-	channel[i].volume2.releaseKey();
-}
-
-*/
