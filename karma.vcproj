@@ -175,6 +175,12 @@
 				RelativePath=".\vstkarma.h">
 			</File>
 			<File
+				RelativePath=".\vstkarmaeditor.cpp">
+			</File>
+			<File
+				RelativePath=".\vstkarmaeditor.h">
+			</File>
+			<File
 				RelativePath="vstkarmasynth.cpp">
 			</File>
 			<File
@@ -252,16 +258,13 @@
 			RelativePath=".\resources\knobfg.bmp">
 		</File>
 		<File
+			RelativePath=".\resources\lfo-mode.bmp">
+		</File>
+		<File
 			RelativePath=".\resources\osc-mode.bmp">
 		</File>
 		<File
 			RelativePath=".\resource.h">
-		</File>
-		<File
-			RelativePath=".\vstkarmaeditor.cpp">
-		</File>
-		<File
-			RelativePath=".\vstkarmaeditor.h">
 		</File>
 	</Files>
 	<Globals>
