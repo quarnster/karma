@@ -13,10 +13,12 @@ public:
 //		name = "bice\0";
 		freq1 = 0;
 		freq2 = 0;
-		amplifier.sustain = 0.5;
-		gain = 0.5;
+		amplifier.sustain = 512;
+		gain = 512;
 		channel = 1;
-		waveformMix = 0.5;
+		waveform1 = 0.4;
+		waveform2 = 0.4;
+		waveformMix = 0;
 	}
 };
 
