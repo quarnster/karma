@@ -5,36 +5,35 @@ ADSR::ADSR() {
 }
 
 int ADSR::getValue(long samplePos, long relSample) {
-/*
-	long alength = (long) (attack * 44100*2);
-	long dlength = (long) (decay * 44100*2);
-	long rlength = (long) (release * 44100*2);
-*/
-	if (relSample == -1) {
-		if (samplePos < attack) {
-			// attack
-			return (samplePos << 10) / attack;
-		} else if (samplePos < attack + decay) {
-			// decay
-			samplePos -= attack;
-			samplePos <<= 10;
+	long samplePos2 = samplePos;
+	int ret;
+
+	if (relSample) // ADSR should not advance when released
+		samplePos = relSample;
+
+	if (samplePos < attack) {
+		// attack
+		ret =  (samplePos << 10) / attack;
+	} else if (samplePos < attack + decay) {
+		// decay
+		samplePos -= attack;
+		samplePos <<= 10;
 
 
-			return 1024 - (((samplePos / decay) * (1024 - sustain)) >> 10);
-		} else {
-			// sustain
-			return sustain;
-		}
+		ret = 1024 - (((samplePos / decay) * (1024 - sustain)) >> 10);
 	} else {
+		// sustain
+		ret = sustain;
+	}
+	if (relSample) {
 		// release
-		samplePos -= relSample;
-		if (samplePos >= release)
+		samplePos2 -= relSample;
+		if (samplePos2 >= release)
 			return 0;
 
-		samplePos <<= 10;
-		return ((1024 - (samplePos / release)) * sustain) >> 10;
+		samplePos2 <<= 10;
+		return ((1024 - (samplePos2 / release)) * ret) >> 10;
 	}
 
-
-	return sustain;
+	return ret;
 }
