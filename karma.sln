@@ -1,5 +1,13 @@
 Microsoft Visual Studio Solution File, Format Version 8.00
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "karma", "karma.vcproj", "{A115243A-1204-4819-BB2E-EDCE790B89F2}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "karmavst", "karma.vcproj", "{A115243A-1204-4819-BB2E-EDCE790B89F2}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "karmalib", "karmalib\karmalib.vcproj", "{2CF5B63F-48E4-4635-B856-02843F099CFC}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "player", "player\player.vcproj", "{D1CB0234-92C0-4E1D-AFA7-D3FF59F29534}"
 	ProjectSection(ProjectDependencies) = postProject
 	EndProjectSection
 EndProject
@@ -13,6 +21,14 @@ Global
 		{A115243A-1204-4819-BB2E-EDCE790B89F2}.Debug.Build.0 = Debug|Win32
 		{A115243A-1204-4819-BB2E-EDCE790B89F2}.Release.ActiveCfg = Release|Win32
 		{A115243A-1204-4819-BB2E-EDCE790B89F2}.Release.Build.0 = Release|Win32
+		{2CF5B63F-48E4-4635-B856-02843F099CFC}.Debug.ActiveCfg = Debug|Win32
+		{2CF5B63F-48E4-4635-B856-02843F099CFC}.Debug.Build.0 = Debug|Win32
+		{2CF5B63F-48E4-4635-B856-02843F099CFC}.Release.ActiveCfg = Release|Win32
+		{2CF5B63F-48E4-4635-B856-02843F099CFC}.Release.Build.0 = Release|Win32
+		{D1CB0234-92C0-4E1D-AFA7-D3FF59F29534}.Debug.ActiveCfg = Debug|Win32
+		{D1CB0234-92C0-4E1D-AFA7-D3FF59F29534}.Debug.Build.0 = Debug|Win32
+		{D1CB0234-92C0-4E1D-AFA7-D3FF59F29534}.Release.ActiveCfg = Release|Win32
+		{D1CB0234-92C0-4E1D-AFA7-D3FF59F29534}.Release.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 	EndGlobalSection

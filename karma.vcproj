@@ -137,38 +137,14 @@
 		</Configuration>
 	</Configurations>
 	<References>
+		<ProjectReference
+			ReferencedProjectIdentifier="{2CF5B63F-48E4-4635-B856-02843F099CFC}"
+			Name="karmalib"/>
 	</References>
 	<Files>
 		<Filter
 			Name="Source Files"
 			Filter="">
-			<File
-				RelativePath=".\ADSR.c">
-			</File>
-			<File
-				RelativePath=".\ADSR.h">
-			</File>
-			<File
-				RelativePath=".\Channel.c">
-			</File>
-			<File
-				RelativePath="Channel.h">
-			</File>
-			<File
-				RelativePath=".\LFO.h">
-			</File>
-			<File
-				RelativePath=".\note.h">
-			</File>
-			<File
-				RelativePath=".\param.h">
-			</File>
-			<File
-				RelativePath=".\program.c">
-			</File>
-			<File
-				RelativePath=".\program.h">
-			</File>
 			<File
 				RelativePath=".\vstkarma.cpp">
 			</File>
@@ -186,12 +162,6 @@
 			</File>
 			<File
 				RelativePath=".\vstmain.cpp">
-			</File>
-			<File
-				RelativePath=".\waveform.c">
-			</File>
-			<File
-				RelativePath=".\waveform.h">
 			</File>
 			<Filter
 				Name="vstsdk"
