@@ -1,7 +1,9 @@
 #include <stdlib.h>
+#include <memory.h>
 
 #include "karma.h"
 #include "karmainternal.h"
+#include "param.h"
 
 static karma_Channel channel[16];
 
@@ -16,6 +18,7 @@ void karma_init() {
 
 void karma_process(karma_Song *song, int *left, int *right, int samples) {
 	int i;
+	int pos = 0;
 
 	karma_MidiEvent *currentEvent = song->currentEvent;
 	while (currentEvent && (currentEvent->time - song->samplesPlayed) <= samples) {
@@ -41,8 +44,13 @@ void karma_process(karma_Song *song, int *left, int *right, int samples) {
 	}
 	song->currentEvent = currentEvent;
 
-	for (i = 0; i < 16; i++) {
-		karma_Channel_process(&channel[i], left, right, samples);
+	while (pos < samples) {
+		int len = samples - pos;
+		if (len > BUFFERSIZE) len = BUFFERSIZE;
+		for (i = 0; i < 16; i++) {
+			karma_Channel_process(&channel[i], &left[pos], &right[pos], len);
+		}
+		pos += len;
 	}
 	song->samplesPlayed += samples;
 }
