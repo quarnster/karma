@@ -63,6 +63,37 @@ void VstKarma::setProgram (long program)
 	currentProgram = &programs[program];
 //	channel[0].program = &programs[program];
 	currentProgramIndex = program;
+
+	setParameter(kChannel,		currentProgram->fChannel);
+	setParameter(kWaveform1,	currentProgram->waveform1);
+	setParameter(kFreq1,		(currentProgram->freq1/2.0)+0.5f);
+	setParameter(kWaveform2,	currentProgram->waveform2);
+	setParameter(kFreq2,		(currentProgram->freq2/2.0)+0.5f);
+	setParameter(kWaveformMix,	currentProgram->waveformMix);
+	setParameter(kModEnvA,		currentProgram->modEnv.attack);
+	setParameter(kModEnvD,		currentProgram->modEnv.decay);
+	setParameter(kModEnvAmount,	(currentProgram->modEnvAmount/2.0)+0.5f);
+	setParameter(kLFO1,		currentProgram->lfo1.waveform);
+	setParameter(kLFO1rate,		currentProgram->lfo1.rate);
+	setParameter(kLFO1amount,	currentProgram->lfo1.amount);
+	setParameter(kLFO2,		currentProgram->lfo2.waveform);
+	setParameter(kLFO2rate,		currentProgram->lfo2.rate);
+	setParameter(kLFO2amount,	currentProgram->lfo2.amount);
+	setParameter(kFilterType,	currentProgram->filter);
+	setParameter(kFilterRes,	currentProgram->resonance);
+	setParameter(kFilterCut,	currentProgram->cut);
+	setParameter(kFilterADSRAmount,	currentProgram->adsrAmount);
+	setParameter(kFilterCutA,	currentProgram->filterCut.attack);
+	setParameter(kFilterCutD,	currentProgram->filterCut.decay);
+	setParameter(kFilterCutS,	currentProgram->filterCut.sustain);
+	setParameter(kFilterCutR,	currentProgram->filterCut.release);
+	setParameter(kDistortion,	currentProgram->distortion);
+	setParameter(kAmplifierA,	currentProgram->amplifier.attack);
+	setParameter(kAmplifierD,	currentProgram->amplifier.decay);
+	setParameter(kAmplifierS,	currentProgram->amplifier.sustain);
+	setParameter(kAmplifierR,	currentProgram->amplifier.release);
+	setParameter(kGain,		currentProgram->gain);
+	setParameter(kTest,		!channel[currentProgram->channel].note[0].released);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -281,6 +312,7 @@ void VstKarma::setParameter (long index, float value)
 	switch (index)
 	{
 		case kChannel:
+/*
 			{
 				int newChannel = (int)(value*15.0);
 				if (currentProgram->channel != newChannel) {
@@ -297,6 +329,7 @@ void VstKarma::setParameter (long index, float value)
 				}
 			}
 
+*/
 			break;
 		case kWaveform1:	currentProgram->waveform1	= value;	break;
 		case kFreq1:		currentProgram->freq1		= (value*2)-1;	break;
