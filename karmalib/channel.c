@@ -469,7 +469,6 @@ void karma_Channel_noteOn(karma_Channel *channel, long notenum, long velocity, l
 	channel->playing_notes++;
 
 	if (channel->program.echoDelay > 1024 && !channel->leftEcho) {
-		debug("malloc\n");
 		channel->leftEcho = (int*) malloc(MAX_ECHO * 2 * sizeof(int));
 		channel->rightEcho = (int*) malloc(MAX_ECHO * 2 * sizeof(int));
 	}
@@ -534,7 +533,13 @@ void karma_Channel_addEvent(karma_Channel *channel, karma_Event *event) {
 		long note = event->data[1] & 0x7f;
 		long velocity = event->data[2] & 0x7f;
 		if (velocity == 0) {
-			karma_Channel_noteOff(channel, note);
+			if (channel->events == MAX_EVENTS)
+				karma_Channel_noteOff(channel, note);
+			else {
+				memcpy(&channel->event[channel->events], event, sizeof(karma_Event));
+				channel->event[channel->events].data[0] = 0x80;
+				channel->events++;
+			}
 		} else 
 			karma_Channel_noteOn(channel, note, velocity, event->deltaFrames);
 	} else if (!event->deltaFrames) {
