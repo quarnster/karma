@@ -4,7 +4,7 @@
 #include "Program.h"
 #include "note.h"
 
-#define MAX_NOTES 20
+#define MAX_NOTES 10
 
 class Channel {
 protected:
@@ -15,7 +15,6 @@ protected:
 private:
 	int panl;
 	int panr;
-	int volume;
 
 	int *leftEcho;
 	int *rightEcho;
