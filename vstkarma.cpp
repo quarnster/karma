@@ -19,7 +19,6 @@ void VstKarma::Debug(char *str) {
 //-----------------------------------------------------------------------------------------
 VstKarma::VstKarma(audioMasterCallback audioMaster) : AudioEffectX (audioMaster, kNumPrograms, kNumParams)
 {
-	Debug("in init...\n");
 	programs = new VstProgram[kNumPrograms];
 	if (programs) {
 		setProgram (0);
@@ -50,7 +49,6 @@ VstKarma::VstKarma(audioMasterCallback audioMaster) : AudioEffectX (audioMaster,
 //-----------------------------------------------------------------------------------------
 VstKarma::~VstKarma ()
 {
-	Debug("unload...\n");
 	if (programs)
 		delete[] programs;
 }
