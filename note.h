@@ -5,9 +5,7 @@ typedef struct {
 	float fPhase1;
 	float fPhase2;
 
-	unsigned char currentNote;
-//	int currentVelocity = velocity;
-//	currentDelta = delta;
+	long currentNote;
 	bool released;
 	bool active;
 
@@ -15,6 +13,11 @@ typedef struct {
 	long relSample;
 
 	long delta;
+
+	float high;
+	float low;
+	float band;
+	float notch;
 
 } karma_Note;
 
