@@ -1,10 +1,20 @@
+/*
+ * Karma softsynth
+ * 
+ * $Id: channel.c,v 1.6 2003/12/30 16:09:09 quarn Exp $
+ * Author : Fredrik Ehnbom
+ * 
+ * All rights reserved. Reproduction, modification, use or disclosure
+ * to third parties without express authority is forbidden.
+ * Copyright © Outbreak, Sweden, 2003, 2004.
+ *
+ */
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
 
 #include "channel.h"
-// #include "vstkarma.h"
 #include "param.h"
 
 #ifndef NULL
@@ -19,6 +29,8 @@
 #define TRUE 1
 #endif
 
+#define MIN_UPDATE_RATE 65536
+
 #ifdef __GNUC__
 static int channelBufferL[BUFFERSIZE] __attribute__((aligned(32)));
 static int channelBufferR[BUFFERSIZE] __attribute__((aligned(32)));
@@ -27,41 +39,20 @@ static __declspec(align(32)) int channelBufferL[BUFFERSIZE];
 static __declspec(align(32)) int channelBufferR[BUFFERSIZE];
 #endif
 
-static float freqtab[128];
-//-----------------------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------------------
+  karma_Channel_init - initialize a channel
+-----------------------------------------------------------------------------------------*/
 void karma_Channel_init(karma_Channel *channel) {
-	int i;
-	double k = 1.059463094359;	// 12th root of 2
-	double a = 6.875;	// a
-
 	memset(channel, 0, sizeof(karma_Channel));
 	channel->panl = channel->panr = (int) (sqrt(0.5) * 1024);
-	channel->playing_notes = 0;
-	channel->leftEcho = NULL;
-	channel->rightEcho = NULL;
-	channel->active = FALSE;
 	channel->volume = 1024;
 
-	for (i = 0; i < MAX_NOTES; i++) {
-		channel->note[i].currentNote = -1;
-		channel->note[i].released = TRUE;
-		channel->note[i].active = FALSE;
-		channel->note[i].samplesPlayed = 0;
-		channel->note[i].relSample = 0;
-		channel->note[i].high = channel->note[i].band = channel->note[i].low = channel->note[i].notch = 0;
-	}
 	karma_Program_init(&channel->program);
-
-	a *= k;	// b
-	a *= k;	// bb
-	a *= k;	// c, frequency of midi note 0
-	for (i = 0; i < 128; i++)	// 128 midi notes
-	{
-		freqtab[i] = (float)a;
-		a *= k;
-	}
 }
-//-----------------------------------------------------------------------------------------
+
+/*-----------------------------------------------------------------------------------------
+  karma_Channel_free - free resources that might have been allocated
+-----------------------------------------------------------------------------------------*/
 void karma_Channel_free(karma_Channel *channel) {
 	karma_MidiEvent *event = channel->event;
 
@@ -77,9 +68,9 @@ void karma_Channel_free(karma_Channel *channel) {
 		free(channel->rightEcho);
 }
 
-//-----------------------------------------------------------------------------------------
-#define MIN_UPDATE_RATE 65536
-void calculateVolumeUpdateRate(karma_Program *program, karma_Note * note) {
+/*-----------------------------------------------------------------------------------------*/
+
+static void calculateVolumeUpdateRate(karma_Program *program, karma_Note * note) {
 	int vol;
 	int rate = MIN_UPDATE_RATE;
 
@@ -94,10 +85,7 @@ void calculateVolumeUpdateRate(karma_Program *program, karma_Note * note) {
 	if (rate == 0) rate += 1;
 	note->volumeUpdateRate = rate -1;
 }
-void calculateFreq2UpdateRate(karma_Program *program, karma_Note * note) {
-//	note->freq2UpdateRate = 0;
-//	return;
-
+static void calculateFreq2UpdateRate(karma_Program *program, karma_Note * note) {
 	int freq;
 	int rate = MIN_UPDATE_RATE;
 
@@ -119,7 +107,7 @@ void calculateFreq2UpdateRate(karma_Program *program, karma_Note * note) {
 	if (rate == 0) rate += 1;
 	note->freq2UpdateRate = rate -1;
 }
-void calculateWaveformUpdateRate(karma_Program *program, karma_Note * note) {
+static void calculateWaveformUpdateRate(karma_Program *program, karma_Note * note) {
 /*
 	int wf;
 	if (program->waveformMix < 50) {
@@ -139,25 +127,25 @@ void calculateWaveformUpdateRate(karma_Program *program, karma_Note * note) {
 */
 	note->waveformUpdateRate = 0;
 }
-void calculateLfo1UpdateRate(karma_Program *program, karma_Note *note) {
+static void calculateLfo1UpdateRate(karma_Program *program, karma_Note *note) {
 	if (program->lfo1.amount < 50) {
 		note->lfo1UpdateRate = MIN_UPDATE_RATE-1;
 		return;
 	}
 
-	// TODO: something better than this...
+	/* TODO: something better than this... */
 	note->lfo1UpdateRate = 0;
 }
-void calculateLfo2UpdateRate(karma_Program *program, karma_Note *note) {
+static void calculateLfo2UpdateRate(karma_Program *program, karma_Note *note) {
 	if (!program->filter || program->lfo2.amount < 50) {
 		note->lfo2UpdateRate = MIN_UPDATE_RATE-1;
 		return;
 	}
 
-	// TODO: something better than this...
+	/* TODO: something better than this... */
 	note->lfo2UpdateRate = 0;
 }
-void calculateUpdateRates(karma_Program *program, karma_Note *note) {
+static void calculateUpdateRates(karma_Program *program, karma_Note *note) {
 	calculateVolumeUpdateRate(program,note);
 	calculateFreq2UpdateRate(program, note);
 	calculateWaveformUpdateRate(program, note);
@@ -165,7 +153,9 @@ void calculateUpdateRates(karma_Program *program, karma_Note *note) {
 	calculateLfo2UpdateRate(program, note);
 }
 
-//-----------------------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------------------
+  karma_Channel_process - process samples for this channel
+-----------------------------------------------------------------------------------------*/
 void karma_Channel_process(karma_Channel *channel, int *left, int *right, long length) {
 	int *lBuf;
 	int *rBuf;
@@ -174,6 +164,7 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 	karma_Program *program = &channel->program;
 
 	if (channel->active || channel->echoSamples > 0) {
+		/* if the channel is active, then we need to clear the channel mixing buffers */
 		memset(&channelBufferL, 0, BUFFERSIZE * sizeof(int));
 		memset(&channelBufferR, 0, BUFFERSIZE * sizeof(int));
 	} else return;
@@ -229,18 +220,16 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 				rBuf += sub;
 			}
 
-			// loop
+			/* loop */
 			while (--sampleFrames >= 0)
 			{
 
-				if (freq1 < 0) freq1 = 0;
-				if (freq2 < 0) freq2 = 0;
 
 
 				if (program->filter) {
+					/* filter routine based on source code from musicdsp.org
+					   http://www.musicdsp.org/archive.php?classid=3#23 to be more exact */
 					float fsample = (float) (sample / 32767.0f);
-//					if (cut < 0) cut = 0;
-//					if (cut > 8192) cut = 8192;
 
 					note->low += f * note->band;
 					note->high = scale * fsample - note->low - q * note->band;
@@ -285,31 +274,34 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 				note->samplesPlayed++;
 
 				if ((note->samplesPlayed & note->volumeUpdateRate) == note->volumeUpdateRate) {
+					/* if it's time to update the volume envelope, then do so */
 					vol = karma_ADSR_getValue(&program->amplifier, note->samplesPlayed, note->relSample);
 					if (!note->released && vol == program->amplifier.sustain && note->samplesPlayed > program->amplifier.attack + program->amplifier.decay) {
-						// the volume adsr envelope is sustained and will not update anymore
+						/* the volume adsr envelope is sustained and will not update anymore */
 						note->volumeUpdateRate = MIN_UPDATE_RATE - 1;
 					}
 					vol *= program->gain;
 					vol >>= 10;
 					vol *= channel->volume;
 					vol >>= 10;
-		
 				}
 
 				if ((note->samplesPlayed & note->lfo1UpdateRate) == note->lfo1UpdateRate) {
+					/* if it's time to update the lfo1, then do so */
 					lfo1 = (program->lfo1.waveformTable[PHASE2TABLE(program->lfo1.waveform, lfo1phase, WAVETABLESIZE/2)] * program->lfo1.amount) >> 10;
 					freq1 = freq1base + lfo1;
 					freq2 = freq2base + lfo1;
 				}
 				if ((note->samplesPlayed & note->lfo2UpdateRate) == note->lfo2UpdateRate) {
+					/* if it's time to update the lfo2, then do so */
 					lfo2 = (program->lfo2.waveformTable[PHASE2TABLE(program->lfo2.waveform, lfo2phase, WAVETABLESIZE/2)] * program->lfo1.amount) >> 10;
 				}
 
 
 				if ((note->samplesPlayed & note->freq2UpdateRate) == note->freq2UpdateRate) {
+					/* if it's time to update the mod-envelope, then do so */
 					if (!note->released && note->samplesPlayed > program->modEnv.attack + program->modEnv.decay) {
-						// the mod adsr envelope is sustained and will not update anymore
+						/* the mod adsr envelope is sustained and will not update anymore */
 						note->freq2UpdateRate = MIN_UPDATE_RATE - 1;
 					}
 
@@ -333,20 +325,21 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 
 
 				if (note->released && vol <= 0) {
-					// this notes volume is too low to hear and the note has been released
-					// so remove it from the playing notes
+					/* this notes volume is too low to hear and the note has been
+					   released so remove it from the playing notes */
 					note->active = FALSE;
 					channel->playing_notes--;
 
 					if (i != channel->playing_notes) {
-						// there are notes after this note that needs to be moved "up"
-						// just copy the last note into this space.
-						// the note in this place needs to be played again so i--
+						/* there are notes after this note that needs to be moved "up"
+						   just copy the last note into this space.
+						   the note in this place needs to be played again so i-- */
 						memcpy(&channel->note[i], &channel->note[channel->playing_notes], sizeof(karma_Note));
 						i--;
 					}
 
-					if (channel->playing_notes == 0) {// no notes playing in the channel
+					if (channel->playing_notes == 0) {
+						/* no notes playing in the channel */
 						channel->active = FALSE;
 					}
 					break;
@@ -389,7 +382,7 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 	rBuf = channelBufferR;
 
 	if (channel->echoSamples > 0) {
-
+		/* apply echo to channel */
 		--channel->echoSamples;
 		if (channel->leftEcho && channel->rightEcho) {
 			int tmp;
@@ -405,44 +398,35 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 					j += MAX_ECHO * 2;
 
 				channel->leftEcho[ channel->echoPos ] = *lBuf++;
-				tmp = channel->leftEcho[j];
-				tmp *= program->echoAmount;
-				tmp >>= 10;
+				tmp = (channel->leftEcho[j] * program->echoAmount) >> 10;
 				channel->leftEcho[ channel->echoPos ] += tmp;
 				left[i] += channel->leftEcho[ channel->echoPos ];
 
 				channel->rightEcho[ channel->echoPos ] = *rBuf++;
-				tmp = channel->rightEcho[j];
-				tmp *= program->echoAmount;
-				tmp >>= 10;
+				tmp = (channel->rightEcho[j] * program->echoAmount) >> 10;
 				channel->rightEcho[ channel->echoPos ] += tmp;
 				right[i] += channel->rightEcho[ channel->echoPos ];
 				++channel->echoPos;
 			}
 		}
 	} else {
+		/* no echo */
 		for (i = 0; i < length; i++) {
 			left[i] += *lBuf++;
 			right[i] += *rBuf++;
 		}
 	}
 }
-void debug(char *str) {
-	FILE *f = NULL;
-	if ((f = fopen("c:\\karma.log", "a")) != NULL) {
-		fprintf(f, str);
-		fclose(f);
-	}
-}
-//-----------------------------------------------------------------------------------------
+
+/*-----------------------------------------------------------------------------------------
+  karma_Channel_noteOn - Sends a note on command
+-----------------------------------------------------------------------------------------*/
 void karma_Channel_noteOn(karma_Channel *channel, long notenum, long velocity, long delta)
 {
 	int idx = channel->playing_notes;
-//	char buf[128];
-
-//	sprintf(buf, "notes: %d\n", channel->playing_notes);
-//	debug(buf);
 	if (channel->playing_notes == MAX_NOTES) {
+		/* if the maximum number of notes are playing we need to find
+		   a note we can throw away and replace with the new one */
 		int i;
 		int kolen = 0;
 		int snlen = 0;
@@ -474,15 +458,10 @@ void karma_Channel_noteOn(karma_Channel *channel, long notenum, long velocity, l
 		channel->playing_notes--;
 	}
 
-	if (idx == MAX_NOTES) {
-		debug("error max notes\n");
-		return;
-	}
-
 	memset(&channel->note[idx], 0, sizeof(karma_Note));
 	channel->note[idx].active = TRUE;
 	channel->note[idx].currentNote = notenum;
-	channel->note[idx].noteFreq = (0xffffffff/44100) * freqtab[channel->note[idx].currentNote]; //(440.0f * pow(2.0, (channel->note[idx].currentNote - 69) / 12.0));
+	channel->note[idx].noteFreq = (0xffffffff/44100) * (440.0f * pow(2.0, (channel->note[idx].currentNote - 69) / 12.0));
 	channel->note[idx].delta = delta;
 
 	calculateUpdateRates(&channel->program, &channel->note[idx]);
@@ -495,7 +474,9 @@ void karma_Channel_noteOn(karma_Channel *channel, long notenum, long velocity, l
 	channel->active = TRUE;
 }
 
-//-----------------------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------------------
+  karma_Channel_noteOff - Sends a note off command
+-----------------------------------------------------------------------------------------*/
 void karma_Channel_noteOff(karma_Channel *channel, long notenum) {
 	int i;
 	int idx = -1;
@@ -513,7 +494,9 @@ void karma_Channel_noteOff(karma_Channel *channel, long notenum) {
 	}
 }
 
-//-----------------------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------------------
+  karma_Channel_allNotesOff - Sends a noteOff command to all active notes
+-----------------------------------------------------------------------------------------*/
 void karma_Channel_allNotesOff(karma_Channel *channel) {
 	int i;
 	for (i = 0; i < channel->playing_notes; i++) {
@@ -523,21 +506,28 @@ void karma_Channel_allNotesOff(karma_Channel *channel) {
 	}
 }
 
-//-----------------------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------------------
+  karma_Channel_processEvent - Takes care of a midi event
+-----------------------------------------------------------------------------------------*/
 void karma_Channel_processEvent(karma_Channel *channel, karma_MidiEvent *event) {
 	long cmd = event->data[0] & 0xf0;
 
-	if (cmd == 0x80) {	// note off
+	if (cmd == 0x80) {
+		/* note off */
 		long note = event->data[1] & 0x7f;
 		karma_Channel_noteOff(channel, note);
-	} else if (cmd == 0xb0)	{// Channel Mode Messages
-		 if (event->data[1] == 7) { // volume change
+	} else if (cmd == 0xb0)	{
+		/* Channel Mode Messages */
+		 if (event->data[1] == 7) {
+			 /* volume controller */
 			 channel->volume = ((event->data[2]&0x7f) / 127.0f) * 1024;
-		} else if (event->data[1] == 10) { // pan change
+		} else if (event->data[1] == 10) {
+			/* pan controller */
 			float value = (event->data[2]&0x7f) / 127.0f;
 			channel->panl = sqrt(1.0f-value) * 1024;
 			channel->panl = sqrt(value) * 1024;
-		} else if (event->data[1] == 74) { // cut off
+		} else if (event->data[1] == 74) {
+			/* filter cut off frequency */
 			karma_Program_setParameter(&channel->program, kFilterCut, (event->data[2]&0x7f) / 127.0f);
 		} else if (event->data[1] >= 12) {
 			karma_Program_setParameter(&channel->program, event->data[1] - 12, (event->data[2]&0x7f) / 127.0f);
@@ -545,11 +535,10 @@ void karma_Channel_processEvent(karma_Channel *channel, karma_MidiEvent *event) 
 	}
 }
 
-//-----------------------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------------------*/
 static void addEvent(karma_Channel *channel, karma_MidiEvent *e) {
-
 	if (!channel->event) {
-		// first event in list
+		/* first event in list */
 		channel->event = e;
 	} else {
 		karma_MidiEvent *tmp = channel->event;
@@ -558,14 +547,19 @@ static void addEvent(karma_Channel *channel, karma_MidiEvent *e) {
 		tmp->next = e;
 	}
 }
-//-----------------------------------------------------------------------------------------
+
+/*-----------------------------------------------------------------------------------------
+  karma_Channel_addEvent - adds a midi event that will be processed within the next frame
+-----------------------------------------------------------------------------------------*/
 void karma_Channel_addEvent(karma_Channel *channel, karma_MidiEvent *event) {
 	long cmd = event->data[0] & 0xf0;
 
-	if (cmd == 0x90)	{	// note on
+	if (cmd == 0x90) {
+		/* note on */
 		long note = event->data[1] & 0x7f;
 		long velocity = event->data[2] & 0x7f;
 		if (velocity == 0) {
+			/* a note on command with 0 velocity is treated as a note off */
 			event->data[0] = 0x80 | (event->data[0]&0xf);
 			addEvent(channel, event);
 		} else 
@@ -576,4 +570,4 @@ void karma_Channel_addEvent(karma_Channel *channel, karma_MidiEvent *event) {
 		addEvent(channel, event);
 	}
 }
-//-----------------------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------------------*/

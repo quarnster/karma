@@ -1,3 +1,14 @@
+/*
+ * Karma softsynth
+ * 
+ * $Id: karma.c,v 1.5 2003/12/30 16:09:09 quarn Exp $
+ * Author : Fredrik Ehnbom
+ * 
+ * All rights reserved. Reproduction, modification, use or disclosure
+ * to third parties without express authority is forbidden.
+ * Copyright © Outbreak, Sweden, 2003, 2004.
+ *
+ */
 #include <stdlib.h>
 #include <memory.h>
 
@@ -8,6 +19,9 @@
 
 static karma_Channel channel[16];
 
+/*-----------------------------------------------------------------------------------------
+  karma_init - initialize the karma softsynth
+-----------------------------------------------------------------------------------------*/
 void karma_init() {
 	int i;
 	karma_Waveform_initTables();
@@ -17,15 +31,23 @@ void karma_init() {
 	}
 }
 
+/*-----------------------------------------------------------------------------------------
+  karma_process - process samples
+-----------------------------------------------------------------------------------------*/
 void karma_process(karma_Song *song, int *left, int *right, int samples) {
 	int i;
 	int pos = 0;
 
 	karma_MidiEvent *currentEvent = song->currentEvent;
 	while (currentEvent && (currentEvent->time - song->samplesPlayed) <= samples) {
+		/* make sure that all events that are or will be due within the next frame
+		   are processed */
+
 		int chn = currentEvent->data[0] & 0xf;
 		int cmd = currentEvent->data[0] & 0xf0;
 		if (cmd == 0x90) {
+			/* karma does not currently support different velocitys for keys
+			   so just set it to 64 */
 			currentEvent->data[2] = 64;
 		}
 		if (cmd == 0xb0 && (currentEvent->data[1] == 120 || currentEvent->data[1] >= 123)) {
@@ -56,9 +78,11 @@ void karma_process(karma_Song *song, int *left, int *right, int samples) {
 	song->samplesPlayed += samples;
 }
 
+/*-----------------------------------------------------------------------------------------*/
+
 static void addEvent(karma_Song *song, karma_MidiEvent *e) {
 	if (!song->event || song->event->time > e->time) {
-		// first element
+		/* insert event first in list */
 		e->next = song->event;
 		song->event = e;
 	} else {
@@ -70,13 +94,16 @@ static void addEvent(karma_Song *song, karma_MidiEvent *e) {
 		ev->next = e;
 	}
 }
-union fConvert {
-	int ival;
-	float fval;
-};
 
-
+/*-----------------------------------------------------------------------------------------
+  karma_loadSong - load a song
+-----------------------------------------------------------------------------------------*/
 karma_Song *karma_loadSong(unsigned char *buff) {
+	union fConvert {
+		int ival;
+		float fval;
+	};
+
 	int pos = 0;
 	int i;
 	int timeformat;
@@ -85,7 +112,7 @@ karma_Song *karma_loadSong(unsigned char *buff) {
 	karma_Song *song = (karma_Song*) malloc(sizeof(karma_Song));
 	memset(song, 0, sizeof(karma_Song));
 
-	// read instruments
+	/* read instruments */
 	for (i = 0; i < 16; i++) {
 		int j;
 		for (j = 0; j < 34; j++) {
@@ -95,7 +122,7 @@ karma_Song *karma_loadSong(unsigned char *buff) {
 		}
 	}
 
-	// read midi-data
+	/* read midi-data */
 	timeformat = buff[pos] << 8 | buff[pos+1] << 0; pos+=2;
 	eventNum = buff[pos] << 8 | buff[pos+1] << 0; pos+=2;
 
@@ -111,11 +138,12 @@ karma_Song *karma_loadSong(unsigned char *buff) {
 		int var = 1;
 		char last = 0;
 
+		/* number of events of this type */
 		int num = buff[pos] << 8 | buff[pos+1] << 0; pos+=2;
 
 
+		/* Read all the delta times for this type of event */
 		for (i = 0; i < num; i++) {
-			
 			int tmp = 0;
 			karma_MidiEvent *ne = (karma_MidiEvent*) malloc(sizeof(karma_MidiEvent));
 			ne->time = 0;
@@ -141,13 +169,16 @@ karma_Song *karma_loadSong(unsigned char *buff) {
 			e = e->next;
 		}
 
+		/* get the type of event */
 		root->data[0] = buff[pos]; pos++;
 		if ((root->data[0] & 0xf0) == 0xb0) {
+			/* this is a midi-controller command so we need to
+			   get the midicontroller also */
 			root->data[1] = (buff[pos])&0x7f; pos++;
 			var++;
 		}
 
-
+		/* read all the events */
 		e = root;
 		for (i = 0; i < num; i++) {
 			char curr;
@@ -171,6 +202,9 @@ karma_Song *karma_loadSong(unsigned char *buff) {
 	return song;
 }
 
+/*-----------------------------------------------------------------------------------------
+  karma_freeSong - free all resources allocated by a song
+-----------------------------------------------------------------------------------------*/
 void karma_freeSong(karma_Song *song) {
 	karma_MidiEvent *event = song->event;
 	while (event) {
@@ -180,10 +214,15 @@ void karma_freeSong(karma_Song *song) {
 	}
 }
 
+/*-----------------------------------------------------------------------------------------
+  karma_free - free all allocated resources
+-----------------------------------------------------------------------------------------*/
 void karma_free() {
 	int i;
 	for (i = 0; i < 16; i++) {
 		karma_Channel_free(&channel[i]);
 	}
 }
+
+/*-----------------------------------------------------------------------------------------*/
 
