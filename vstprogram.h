@@ -15,7 +15,7 @@ public:
 		volume1.sustain = 0.5;
 		volume1.release = 0.001;
 		volume2.release = 0.001;
-		volume = 1.0;
+		volume = 0.5;
 		channel = 1;
 	}
 };
