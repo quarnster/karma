@@ -23,7 +23,7 @@ float ADSR::getValue(long samplePos, long relSample) {
 		}
 	} else {
 		samplePos -= relSample;
-		if (samplePos > rlength)
+		if (samplePos >= rlength)
 			return 0;
 
 		return (float) ((1 - (samplePos / (float) rlength)) * sustain);
