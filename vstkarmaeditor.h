@@ -31,6 +31,7 @@ protected:
 private:
 	void valueChanged (CDrawContext* context, CControl* control);
 
+	//==Osc-panel===========================================================
 	CKickButton	*waveform1Button;
 	CKickButton	*waveform2Button;
 
@@ -41,6 +42,50 @@ private:
 
 	CMovieBitmap	*osc1Display;
 	CMovieBitmap	*osc2Display;
+
+	//==LFO1-panel===========================================================
+	CKickButton	*lfo1Button;
+
+	CKnob		*lfo1AKnob;
+	CKnob		*lfo1RKnob;
+
+	CMovieBitmap	*lfo1Display;
+
+	//==LFO2-panel===========================================================
+	CKickButton	*lfo2Button;
+
+	CKnob		*lfo2AKnob;
+	CKnob		*lfo2RKnob;
+
+	CMovieBitmap	*lfo2Display;
+
+	//==Test-button===========================================================
+	COnOffButton	*testButton;
+
+	//==Mod-envelope===========================================================
+	CKnob		*modEnvAttack;
+	CKnob		*modEnvDecay;
+	CKnob		*modEnvAmount;
+
+	//==Amplifier===========================================================
+	CKnob		*ampAttack;
+	CKnob		*ampDecay;
+	CKnob		*ampSustain;
+	CKnob		*ampRelease;
+	CKnob		*ampGain;
+
+	//==Filter===========================================================
+	CKnob		*filterA;
+	CKnob		*filterD;
+	CKnob		*filterS;
+	CKnob		*filterR;
+	CKnob		*filterADSRAmount;
+	CKnob		*filterCut;
+	CKnob		*filterRes;
+	CKnob		*distortion;
+	CKickButton	*filterButton;
+	CMovieBitmap	*filterDisplay;
+
 
 	// others
 	long              oldTicks;

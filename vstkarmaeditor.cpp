@@ -31,6 +31,8 @@ enum
 	kKnobBgBitmap,
 	kKnobFgBitmap,
 
+	kLFODisplayBitmap,
+
 
 	// others
 	kBackgroundW = 904,
@@ -144,10 +146,13 @@ long VstKarmaEditor::open (void *ptr)
 	background->forget ();
 
 	CPoint point (0, 0);
-
-	//--CKickButton-----------------------------------------------
 	CBitmap *button = new CBitmap (kButtonBitmap);
+	CBitmap *knob   = new CBitmap (kKnobFgBitmap);
+	CBitmap *bgKnob = new CBitmap (kKnobBgBitmap);
 
+	//==Osc-panel===========================================================
+
+	// osc-selector 1 and 2
 	size(0, 0, 60, 29);
 	size.offset(39, 251);
 	waveform1Button = new CKickButton (size, this, kWaveform1, 29, button, point);
@@ -158,12 +163,7 @@ long VstKarmaEditor::open (void *ptr)
 	waveform2Button = new CKickButton (size, this, kWaveform2, 29, button, point);
 	frame->addView (waveform2Button);
 
-	button->forget();
-
-
-	//--CKnob--------------------------------------
-	CBitmap *knob   = new CBitmap (kKnobFgBitmap);
-	CBitmap *bgKnob = new CBitmap (kKnobBgBitmap);
+	// freq1 and 2
 
  	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
 	size.offset(57, 81); 
@@ -179,6 +179,7 @@ long VstKarmaEditor::open (void *ptr)
 	freq2Knob->setValue(effect->getParameter(kFreq2));
 	frame->addView (freq2Knob);
 
+	// waveform mix
  	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
 	size.offset(142, 173); 
 	waveformMixKnob = new CKnob (size, this, kWaveformMix, bgKnob, knob, point);
@@ -186,12 +187,9 @@ long VstKarmaEditor::open (void *ptr)
 	waveformMixKnob->setValue(effect->getParameter(kWaveformMix));
 	frame->addView (waveformMixKnob);
 
-	knob->forget ();
-	bgKnob->forget ();
 
-
+	// osc1 and 2 display
 	CBitmap* oscBitmap  = new CBitmap (kOscBitmap);
-//	CBitmap* vuOffBitmap = new CBitmap (kOscBackBitmap);
 
 	size (0, 0, 13, 91);
 	size.offset (41, 150 );
@@ -206,18 +204,217 @@ long VstKarmaEditor::open (void *ptr)
 	frame->addView (osc2Display);
 
 	oscBitmap->forget ();
-//	vuOffBitmap->forget();
 
-/*
-	//--CMovieButton--------------------------------------
- 	size (0, 0, onOffButton->getWidth (), onOffButton->getHeight () / 2);
-	size.offset (210 + 20, 20);
-	point (0, 0);
-	cMovieButton = new CMovieButton (size, this, kMovieButtonTag, onOffButton->getHeight () / 2, onOffButton, point);
-	frame->addView (cMovieButton);
+	//==LFO1===========================================================
 
-	onOffButton->forget ();
-*/
+	// mode button
+	size(0, 0, 60, 29);
+	size.offset(124, 423);
+	lfo1Button = new CKickButton (size, this, kLFO1, 29, button, point);
+	frame->addView (lfo1Button);
+
+	// rate and amount
+
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(47, 391); 
+	lfo1RKnob = new CKnob (size, this, kLFO1rate, bgKnob, knob, point);
+	lfo1RKnob->setInsetValue (7);
+	lfo1RKnob->setValue(effect->getParameter(kLFO1rate));
+	frame->addView (lfo1RKnob);
+
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(225, 391); 
+	lfo1AKnob = new CKnob (size, this, kLFO1amount, bgKnob, knob, point);
+	lfo1AKnob->setInsetValue (7);
+	lfo1AKnob->setValue(effect->getParameter(kLFO1amount));
+	frame->addView (lfo1AKnob);
+
+	// LFO display
+	CBitmap* lfoBitmap  = new CBitmap (kLFODisplayBitmap);
+
+	size (0, 0, 13, 51);
+	size.offset (146, 365);
+	lfo1Display = new CMovieBitmap (size, this, -1, 5, 51, lfoBitmap, point);
+	lfo1Display->setValue(effect->getParameter(kLFO1));
+	frame->addView (lfo1Display);
+
+	//==LFO2===========================================================
+
+	// mode button
+	size(0, 0, 60, 29);
+	size.offset(124, 550);
+	lfo2Button = new CKickButton (size, this, kLFO2, 29, button, point);
+	frame->addView (lfo2Button);
+
+	// rate and amount
+
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(47, 518); 
+	lfo2RKnob = new CKnob (size, this, kLFO2rate, bgKnob, knob, point);
+	lfo2RKnob->setInsetValue (7);
+	lfo2RKnob->setValue(effect->getParameter(kLFO2rate));
+	frame->addView (lfo2RKnob);
+
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(225, 518); 
+	lfo2AKnob = new CKnob (size, this, kLFO2amount, bgKnob, knob, point);
+	lfo2AKnob->setInsetValue (7);
+	lfo2AKnob->setValue(effect->getParameter(kLFO2amount));
+	frame->addView (lfo2AKnob);
+
+	// LFO display
+
+	size (0, 0, 13, 51);
+	size.offset (146, 492);
+	lfo2Display = new CMovieBitmap (size, this, -1, 5, 51, lfoBitmap, point);
+	lfo2Display->setValue(effect->getParameter(kLFO2));
+	frame->addView (lfo2Display);
+	lfoBitmap->forget();
+
+
+	//==Test-button===========================================================
+	size(0, 0, 60, 29);
+	size.offset(800, 56);
+	testButton = new COnOffButton (size, this, kTest, button);
+	frame->addView (testButton);
+
+
+	//==Mod-envelope===========================================================
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(374, 79); 
+	modEnvAttack = new CKnob (size, this, kModEnvA, bgKnob, knob, point);
+	modEnvAttack->setInsetValue (7);
+	modEnvAttack->setValue(effect->getParameter(kModEnvA));
+	frame->addView (modEnvAttack);
+
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(486, 79); 
+	modEnvDecay = new CKnob (size, this, kModEnvD, bgKnob, knob, point);
+	modEnvDecay->setInsetValue (7);
+	modEnvDecay->setValue(effect->getParameter(kModEnvD));
+	frame->addView (modEnvDecay);
+
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(652, 79); 
+	modEnvAmount = new CKnob (size, this, kModEnvAmount, bgKnob, knob, point);
+	modEnvAmount->setInsetValue (7);
+	modEnvAmount->setValue(effect->getParameter(kModEnvAmount));
+	frame->addView (modEnvAmount);
+
+	//==Amplifier===========================================================
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(359, 509); 
+	ampAttack = new CKnob (size, this, kAmplifierA, bgKnob, knob, point);
+	ampAttack->setInsetValue (7);
+	ampAttack->setValue(effect->getParameter(kAmplifierA));
+	frame->addView (ampAttack);
+
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(475, 509); 
+	ampDecay = new CKnob (size, this, kAmplifierD, bgKnob, knob, point);
+	ampDecay->setInsetValue (7);
+	ampDecay->setValue(effect->getParameter(kAmplifierD));
+	frame->addView (ampDecay);
+
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(590, 509); 
+	ampSustain = new CKnob (size, this, kAmplifierS, bgKnob, knob, point);
+	ampSustain->setInsetValue (7);
+	ampSustain->setValue(effect->getParameter(kAmplifierS));
+	frame->addView (ampSustain);
+
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(706, 509); 
+	ampRelease = new CKnob (size, this, kAmplifierR, bgKnob, knob, point);
+	ampRelease->setInsetValue (7);
+	ampRelease->setValue(effect->getParameter(kAmplifierR));
+	frame->addView (ampRelease);
+
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(821, 509); 
+	ampGain = new CKnob (size, this, kGain, bgKnob, knob, point);
+	ampGain->setInsetValue (7);
+	ampGain->setValue(effect->getParameter(kGain));
+	frame->addView (ampGain);
+
+	//==Filter===========================================================
+	size(0, 0, 60, 29);
+	size.offset(817, 267);
+	filterButton = new CKickButton (size, this, kFilterType, 29, button, point);
+	frame->addView (filterButton);
+
+	// ADSR
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(369, 226); 
+	filterA = new CKnob (size, this, kFilterCutA, bgKnob, knob, point);
+	filterA->setInsetValue (7);
+	filterA->setValue(effect->getParameter(kFilterCutA));
+	frame->addView (filterA);
+
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(484, 226); 
+	filterD = new CKnob (size, this, kFilterCutD, bgKnob, knob, point);
+	filterD->setInsetValue (7);
+	filterD->setValue(effect->getParameter(kFilterCutD));
+	frame->addView (filterD);
+
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(600, 226); 
+	filterS = new CKnob (size, this, kFilterCutS, bgKnob, knob, point);
+	filterS->setInsetValue (7);
+	filterS->setValue(effect->getParameter(kFilterCutS));
+	frame->addView (filterS);
+
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(716, 226); 
+	filterR = new CKnob (size, this, kFilterCutR, bgKnob, knob, point);
+	filterR->setInsetValue (7);
+	filterR->setValue(effect->getParameter(kFilterCutR));
+	frame->addView (filterR);
+
+	//
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(369, 360); 
+	filterCut = new CKnob (size, this, kFilterCut, bgKnob, knob, point);
+	filterCut->setInsetValue (7);
+	filterCut->setValue(effect->getParameter(kFilterCut));
+	frame->addView (filterCut);
+
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(485, 360); 
+	filterRes = new CKnob (size, this, kFilterRes, bgKnob, knob, point);
+	filterRes->setInsetValue (7);
+	filterRes->setValue(effect->getParameter(kFilterRes));
+	frame->addView (filterRes);
+
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(600, 360); 
+	filterADSRAmount = new CKnob (size, this, kFilterADSRAmount, bgKnob, knob, point);
+	filterADSRAmount->setInsetValue (7);
+	filterADSRAmount->setValue(effect->getParameter(kFilterADSRAmount));
+	frame->addView (filterADSRAmount);
+
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(797, 359); 
+	distortion = new CKnob (size, this, kDistortion, bgKnob, knob, point);
+	distortion->setInsetValue (7);
+	distortion->setValue(effect->getParameter(kDistortion));
+	frame->addView (distortion);
+
+	// display
+	CBitmap* filterBitmap  = new CBitmap (kFilterDisplayBitmap);
+
+	size (0, 0, 13, 51);
+	size.offset (840, 206);
+	filterDisplay = new CMovieBitmap (size, this, -1, 5, 51, filterBitmap, point);
+	filterDisplay->setValue(effect->getParameter(kFilterType));
+	frame->addView (filterDisplay);
+
+	filterBitmap->forget();
+
+	button->forget();
+	knob->forget ();
+	bgKnob->forget ();
 
 
 	// here we can call a initialize () function to initalize all controls values
@@ -339,13 +536,50 @@ void VstKarmaEditor::close ()
 	frame = 0;
 
 	// set to zero all pointer (security)
-	freq1Knob = 0;
-	freq2Knob = 0;
-	waveform1Button = 0;
-	waveform2Button = 0;
-	waveformMixKnob = 0;
-	osc1Display = 0;
-	osc2Display = 0;
+	freq1Knob		= 0;
+	freq2Knob		= 0;
+	waveform1Button		= 0;
+	waveform2Button		= 0;
+	waveformMixKnob		= 0;
+	osc1Display		= 0;
+	osc2Display		= 0;
+
+	lfo1AKnob		= 0;
+	lfo1RKnob		= 0;
+	lfo1Display		= 0;
+	lfo1Button		= 0;
+
+	lfo2AKnob		= 0;
+	lfo2RKnob		= 0;
+	lfo2Display		= 0;
+	lfo2Button		= 0;
+
+	testButton		= 0;
+
+	modEnvAttack		= 0;
+	modEnvDecay		= 0;
+	modEnvAmount		= 0;
+
+	//==Amplifier===========================================================
+	ampAttack		= 0;
+	ampDecay		= 0;
+	ampSustain		= 0;
+	ampRelease		= 0;
+	ampGain			= 0;
+
+	//==Filter===========================================================
+	filterA			= 0;
+	filterD			= 0;
+	filterS			= 0;
+	filterR			= 0;
+	filterADSRAmount	= 0;
+	filterCut		= 0;
+	filterRes		= 0;
+	distortion		= 0;
+	filterButton		= 0;
+	filterDisplay		= 0;
+
+
 }
 
 //-----------------------------------------------------------------------------
@@ -377,19 +611,116 @@ void VstKarmaEditor::setParameter (long index, float value)
 	switch (index)
 	{
 		case kWaveform1:
-			osc1Display->setValue(effect->getParameter(index));
+			if (osc1Display)
+				osc1Display->setValue(effect->getParameter(index));
 			break;
 		case kWaveform2:
-			osc2Display->setValue(effect->getParameter(index));
+			if (osc2Display)
+				osc2Display->setValue(effect->getParameter(index));
 			break;
 		case kWaveformMix:
-			waveformMixKnob->setValue(effect->getParameter(index));
+			if (waveformMixKnob)
+				waveformMixKnob->setValue(effect->getParameter(index));
 			break;
 		case kFreq1:
-			freq1Knob->setValue(effect->getParameter(index));
+			if (freq1Knob)
+				freq1Knob->setValue(effect->getParameter(index));
 			break;
 		case kFreq2:
-			freq2Knob->setValue(effect->getParameter(index));
+			if (freq2Knob)
+				freq2Knob->setValue(effect->getParameter(index));
+			break;
+		case kLFO1:
+			if (lfo1Display)
+				lfo1Display->setValue(effect->getParameter(index));
+			break;
+		case kLFO2:
+			if (lfo2Display)
+				lfo2Display->setValue(effect->getParameter(index));
+			break;
+		case kLFO1amount:
+			if (lfo1AKnob)
+				lfo1AKnob->setValue(effect->getParameter(index));
+			break;
+		case kLFO2amount:
+			if (lfo2AKnob)
+				lfo2AKnob->setValue(effect->getParameter(index));
+			break;
+		case kLFO1rate:
+			if (lfo1RKnob)
+				lfo1RKnob->setValue(effect->getParameter(index));
+			break;
+		case kLFO2rate:
+			if (lfo2RKnob)
+				lfo2RKnob->setValue(effect->getParameter(index));
+			break;
+		case kModEnvAmount:
+			if (modEnvAmount)
+				modEnvAmount->setValue(effect->getParameter(index));
+			break;
+		case kModEnvA:
+			if (modEnvAttack)
+				modEnvAttack->setValue(effect->getParameter(index));
+			break;
+		case kModEnvD:
+			if (modEnvDecay)
+				modEnvDecay->setValue(effect->getParameter(index));
+			break;
+		case kGain:
+			if (ampGain)
+				ampGain->setValue(effect->getParameter(index));
+			break;
+		case kAmplifierA:
+			if (ampAttack)
+				ampAttack->setValue(effect->getParameter(index));
+			break;
+		case kAmplifierD:
+			if (ampDecay)
+				ampDecay->setValue(effect->getParameter(index));
+			break;
+		case kAmplifierS:
+			if (ampSustain)
+				ampSustain->setValue(effect->getParameter(index));
+			break;
+		case kAmplifierR:
+			if (ampRelease)
+				ampRelease->setValue(effect->getParameter(index));
+			break;
+		case kFilterCutA:
+			if (filterA)
+				filterA->setValue(effect->getParameter(index));
+			break;
+		case kFilterCutD:
+			if (filterD)
+				filterD->setValue(effect->getParameter(index));
+			break;
+		case kFilterCutS:
+			if (filterS)
+				filterS->setValue(effect->getParameter(index));
+			break;
+		case kFilterCutR:
+			if (filterR)
+				filterR->setValue(effect->getParameter(index));
+			break;
+		case kFilterCut:
+			if (filterCut)
+				filterCut->setValue(effect->getParameter(index));
+			break;
+		case kFilterRes:
+			if (filterRes)
+				filterRes->setValue(effect->getParameter(index));
+			break;
+		case kFilterADSRAmount:
+			if (filterADSRAmount)
+				filterADSRAmount->setValue(effect->getParameter(index));
+			break;
+		case kDistortion:
+			if (distortion)
+				distortion->setValue(effect->getParameter(index));
+			break;
+		case kFilterType:
+			if (filterDisplay)
+				filterDisplay->setValue(effect->getParameter(index));
 			break;
 
 /*
@@ -433,8 +764,7 @@ void VstKarmaEditor::valueChanged (CDrawContext* context, CControl* control)
 	int tag = control->getTag();
 	switch (tag)
 	{
-		case kWaveform1:
-		case kWaveform2:
+		case kFilterType:
 			{
 				CKickButton *b = (CKickButton*) control;
 				if (b->getValue() == 0) {
@@ -445,9 +775,31 @@ void VstKarmaEditor::valueChanged (CDrawContext* context, CControl* control)
 				}
 			}
 			break;
+		case kWaveform1:
+		case kWaveform2:
+		case kLFO1:
+		case kLFO2:
+			{
+				CKickButton *b = (CKickButton*) control;
+				if (b->getValue() == 0) {
+					float val = effect->getParameter(tag);
+					val += 0.219;
+					if (val > 1) val = 0;
+					effect->setParameter(tag, val);
+				}
+			}
+			break;
+		default:
+/*
+		case kLFO1rate:
+		case kLFO1amount:
+		case kLFO2rate:
+		case kLFO2amount:
 		case kFreq1:
 		case kFreq2:
 		case kWaveformMix:
+		case kTest:
+*/
 			{
 //				CKnob *k = (CKnob*) control;
 				effect->setParameter(tag, control->getValue());
@@ -531,8 +883,8 @@ void VstKarmaEditor::valueChanged (CDrawContext* context, CControl* control)
 		}
 		} break;
 */
-	default:
-		control->update (context);	
+//	default:
+//		control->update (context);	
 	}
 }
 
