@@ -5,8 +5,7 @@
 #define MAX_ECHO 44100 * 2
 
 enum {
-	kChannel = 0,
-	kWaveform1,
+	kWaveform1 = 0,
 	kFreq1,
 	kWaveLen1,
 

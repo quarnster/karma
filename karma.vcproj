@@ -144,16 +144,6 @@
 			Filter="">
 			<File
 				RelativePath=".\ADSR.c">
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\ADSR.h">
@@ -174,10 +164,10 @@
 				RelativePath=".\param.h">
 			</File>
 			<File
-				RelativePath=".\program.h">
+				RelativePath=".\program.c">
 			</File>
 			<File
-				RelativePath="VstChannel.h">
+				RelativePath=".\program.h">
 			</File>
 			<File
 				RelativePath=".\vstkarma.cpp">
@@ -196,9 +186,6 @@
 			</File>
 			<File
 				RelativePath=".\vstmain.cpp">
-			</File>
-			<File
-				RelativePath="VstProgram.h">
 			</File>
 			<Filter
 				Name="vstsdk"

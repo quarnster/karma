@@ -4,8 +4,8 @@
 #include <string.h>
 #include "D:\CODE\vst\vstsdk2.3\vstsdk2.3\source\common\audioeffectx.h"
 
-#include "VstProgram.h"
-#include "VstChannel.h"
+#include "Program.h"
+#include "Channel.h"
 #include "param.h"
 
 enum
@@ -58,9 +58,9 @@ public:
 private:
 	void initProcess();
 
-	VstChannel channel[16];
-	VstProgram* programs;
-	VstProgram* currentProgram;
+	Channel channel[16];
+//	Program* programs;
+	karma_Program* currentProgram;
 	long	currentProgramIndex;
 };
 

@@ -4,8 +4,7 @@
 #include "ADSR.h"
 #include "LFO.h"
 
-class Program {
-public:
+typedef struct {
 	int waveform1;
 	int waveform2;
 
@@ -21,8 +20,8 @@ public:
 	karma_ADSR modEnv;
 	float modEnvAmount;
 
-	LFO lfo1;
-	LFO lfo2;
+	karma_LFO lfo1;
+	karma_LFO lfo2;
 //	ADSR volume1;
 //	ADSR volume2;
 
@@ -41,7 +40,16 @@ public:
 
 	int echoDelay;
 	int echoAmount;
-};
+} karma_Program;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void karma_Program_init(karma_Program *program);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

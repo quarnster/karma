@@ -8,7 +8,6 @@
 
 class Channel {
 protected:
-	Program *program;
 	bool active;
 	int playing_notes;
 
@@ -32,6 +31,7 @@ private:
 
 
 public:
+	karma_Program program;
 	karma_Note note[MAX_NOTES];
 //	bool released;
 //	long currentNote;
@@ -44,6 +44,14 @@ public:
 	void noteOff(long note);
 
 	void setParameter(int cmd, int param);
+
+	void AllNotesOff() {
+		for (int i = 0; i < playing_notes; i++) {
+			note[i].released = true;
+			note[i].relSample = note[i].samplesPlayed;
+		}
+	}
+
 };
 
 
