@@ -3,7 +3,7 @@
 
 class LFO {
 public:
-	float waveform;
+	int waveform;
 	float rate;
 	int amount;
 
