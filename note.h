@@ -6,6 +6,8 @@ typedef struct {
 	int phase2;
 
 	long currentNote;
+	int noteFreq;
+
 	bool released;
 	bool active;
 
