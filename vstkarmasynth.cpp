@@ -52,7 +52,10 @@ void VstKarma::process (float **inputs, float **outputs, long sampleFrames)
 			channel[i].process(buffer, sampleFrames);
 		}
 		for (int i = 0; i < sampleFrames; i++) {
-			outputs[0][i] += buffer[i] / 32767.0f;
+			float sample = buffer[i] / 32767.0f;
+			sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;
+			outputs[0][i] += sample;
+			outputs[1][i] += sample;
 		}
 
 	}
@@ -69,7 +72,10 @@ void VstKarma::processReplacing (float **inputs, float **outputs, long sampleFra
 			channel[i].process(buffer, sampleFrames);
 		}
 		for (int i = 0; i < sampleFrames; i++) {
-			outputs[0][i] = buffer[i] / 32767.0f;
+			float sample = buffer[i] / 32767.0f;
+			sample = sample > 1.0f ? 1.0f : sample < -1.0f ? -1.0f : sample;
+			outputs[0][i] = sample;
+			outputs[1][i] = sample;
 		}
 	}
 }
