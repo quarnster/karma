@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "vstkarma.h"
+#include "vstkarmaeditor.h"
 
 void VstKarma::Debug(char *str) {
 	FILE *f = NULL;
@@ -42,6 +43,8 @@ VstKarma::VstKarma(audioMasterCallback audioMaster) : AudioEffectX (audioMaster,
 		isSynth();
 		setUniqueID('OTBk');	// <<<! *must* change this!!!!
 	}
+	editor = new VstKarmaEditor (this);
+
 	initProcess();
 	suspend();
 }
@@ -92,12 +95,8 @@ void VstKarma::getParameterLabel (long index, char *label)
 		case kWaveform2:	strcpy (label, " Shape  ");		break;
 		case kFilterType:	strcpy (label, "  Type  ");		break;
 
-		case kFreq1A:
-		case kFreq1D:
-		case kFreq1R:
-		case kFreq2A:
-		case kFreq2D:
-		case kFreq2R:
+		case kModEnvA:
+		case kModEnvD:
 		case kFilterCutA:
 		case kFilterCutD:
 		case kFilterCutR:
@@ -106,13 +105,13 @@ void VstKarma::getParameterLabel (long index, char *label)
 		case kAmplifierR: 	strcpy (label, "   Sec   ");		break;
 
 //		case kVolume2:
+		case kFreq1:
+		case kFreq2:
 		case kLFO1rate:
 		case kLFO2rate:
 		case kFilterRes:
 		case kFilterADSRAmount:
 		case kFilterCut:
-		case kFreq1S:
-		case kFreq2S:
 		case kFilterCutS:	strcpy (label, "  Hz  ");		break;
 
 		case kAmplifierS:
@@ -145,53 +144,55 @@ void VstKarma::getParameterDisplay(long index, char *text)
 
 		case kWaveform1:
 			if (currentProgram->waveform1 < .20)
-				strcpy(text, "Triangle");
-			else if (currentProgram->waveform1 < 0.4)
-				strcpy(text, "Sawtooth");
-			else if (currentProgram->waveform1 < 0.6)
-				strcpy(text, " Square ");
-			else if (currentProgram->waveform1 < 0.8)
 				strcpy(text, "  Sine  ");
+			else if (currentProgram->waveform1 < 0.4)
+				strcpy(text, "Triangle");
+			else if (currentProgram->waveform1 < 0.6)
+				strcpy(text, "Sawtooth");
+			else if (currentProgram->waveform1 < 0.8)
+				strcpy(text, " Square ");
 			else
 				strcpy(text, "  Noise ");
 			break;
 		case kWaveform2:
 			if (currentProgram->waveform2 < .20)
-				strcpy(text, "Triangle");
-			else if (currentProgram->waveform2 < 0.4)
-				strcpy(text, "Sawtooth");
-			else if (currentProgram->waveform2 < 0.6)
-				strcpy(text, " Square ");
-			else if (currentProgram->waveform2 < 0.8)
 				strcpy(text, "  Sine  ");
+			else if (currentProgram->waveform2 < 0.4)
+				strcpy(text, "Triangle");
+			else if (currentProgram->waveform2 < 0.6)
+				strcpy(text, "Sawtooth");
+			else if (currentProgram->waveform2 < 0.8)
+				strcpy(text, " Square ");
 			else
 				strcpy(text, "  Noise ");
 			break;
 
 		case kLFO1:
 			if (currentProgram->lfo1.waveform < .20)
-				strcpy(text, "Triangle");
-			else if (currentProgram->lfo1.waveform < 0.4)
-				strcpy(text, "Sawtooth");
-			else if (currentProgram->lfo1.waveform < 0.6)
-				strcpy(text, " Square ");
-			else if (currentProgram->lfo1.waveform < 0.8)
 				strcpy(text, "  Sine  ");
+			else if (currentProgram->lfo1.waveform < 0.4)
+				strcpy(text, "Triangle");
+			else if (currentProgram->lfo1.waveform < 0.6)
+				strcpy(text, "Sawtooth");
+			else if (currentProgram->lfo1.waveform < 0.8)
+				strcpy(text, " Square ");
 			else
 				strcpy(text, "  Noise ");
 			break;
 		case kLFO2:
 			if (currentProgram->lfo2.waveform < .20)
-				strcpy(text, "Triangle");
-			else if (currentProgram->lfo2.waveform < 0.4)
-				strcpy(text, "Sawtooth");
-			else if (currentProgram->lfo2.waveform < 0.6)
-				strcpy(text, " Square ");
-			else if (currentProgram->lfo2.waveform < 0.8)
 				strcpy(text, "  Sine  ");
+			else if (currentProgram->lfo2.waveform < 0.4)
+				strcpy(text, "Triangle");
+			else if (currentProgram->lfo2.waveform < 0.6)
+				strcpy(text, "Sawtooth");
+			else if (currentProgram->lfo2.waveform < 0.8)
+				strcpy(text, " Square ");
 			else
 				strcpy(text, "  Noise ");
 			break;
+		case kFreq1:		float2string(currentProgram->freq1, text);		break;
+		case kFreq2:		float2string(currentProgram->freq2, text);		break;
 		case kLFO1amount:	float2string(currentProgram->lfo1.amount, text);	break;
 		case kLFO1rate:		float2string(currentProgram->lfo1.rate, text);		break;
 		case kLFO2amount:	float2string(currentProgram->lfo2.amount, text);	break;
@@ -201,8 +202,7 @@ void VstKarma::getParameterDisplay(long index, char *text)
 		case kFilterCut:	float2string(currentProgram->cut, text);		break;
 		case kFilterRes:	float2string(currentProgram->resonance, text);		break;
 		case kFilterADSRAmount:	float2string(currentProgram->adsrAmount, text);		break;
-		case kFreq1S:		float2string(currentProgram->freq1.sustain, text);	break;
-		case kFreq2S:		float2string(currentProgram->freq2.sustain, text);	break;
+		case kModEnvAmount:	float2string(currentProgram->modEnvAmount, text);	break;
 		case kAmplifierS:	dB2string(currentProgram->amplifier.sustain, text);	break;
 
 		case kGain:		dB2string (currentProgram->gain, text);		break;
@@ -210,12 +210,8 @@ void VstKarma::getParameterDisplay(long index, char *text)
 		case kFilterCutA:	value = currentProgram->filterCut.attack;	break;
 		case kFilterCutD:	value = currentProgram->filterCut.decay;	break;
 		case kFilterCutR:	value = currentProgram->filterCut.release;	break;
-		case kFreq1A:		value = currentProgram->freq1.attack;		break;
-		case kFreq1D:		value = currentProgram->freq1.decay;		break;
-		case kFreq1R:		value = currentProgram->freq1.release;		break;
-		case kFreq2A:		value = currentProgram->freq2.attack;		break;
-		case kFreq2D:		value = currentProgram->freq2.decay;		break;
-		case kFreq2R:		value = currentProgram->freq2.release;		break;
+		case kModEnvA:		value = currentProgram->modEnv.attack;		break;
+		case kModEnvD:		value = currentProgram->modEnv.decay;		break;
 		case kAmplifierA:	value = currentProgram->amplifier.attack;	break;
 		case kAmplifierD:	value = currentProgram->amplifier.decay;	break;
 		case kAmplifierR:	value = currentProgram->amplifier.release;	break;
@@ -230,11 +226,11 @@ void VstKarma::getParameterDisplay(long index, char *text)
 
 	}
 	if (value > -0.5) {
-		if (value == 0.0) {
-			strcpy(text, "  Off  ");
-		} else {
+//		if (value == 0.0) {
+//			strcpy(text, "  Off  ");
+//		} else {
 			float2string(value*2, text);
-		}
+//		}
 	}
 }
 
@@ -245,16 +241,13 @@ void VstKarma::getParameterName (long index, char *label)
 	{
 		case kChannel:		strcpy (label, "Channel");		break;
 		case kWaveform1:	strcpy (label, " Wave 1 ");		break;
-		case kFreq1A:		strcpy (label, " - attack");		break;
-		case kFreq1D:		strcpy (label, " - decay");		break;
-		case kFreq1S:		strcpy (label, " - sustain");		break;
-		case kFreq1R:		strcpy (label, " - release");		break;
+		case kFreq1:		strcpy (label, " - freq");		break;
 		case kWaveform2:	strcpy (label, " Wave 2 ");		break;
-		case kFreq2A:		strcpy (label, " - attack");		break;
-		case kFreq2D:		strcpy (label, " - decay");		break;
-		case kFreq2S:		strcpy (label, " - sustain");		break;
-		case kFreq2R:		strcpy (label, " - release");		break;
+		case kFreq2:		strcpy (label, " - freq");		break;
 		case kWaveformMix:	strcpy (label, "Waveform mix");		break;
+		case kModEnvAmount:	strcpy (label, "Amount");		break;
+		case kModEnvA:		strcpy (label, "ModEnv A");		break;
+		case kModEnvD:		strcpy (label, "ModEnv D");		break;
 		case kLFO1:		strcpy (label, "LFO 1");		break;
 		case kLFO1amount:	strcpy (label, " - amount");		break;
 		case kLFO1rate:		strcpy (label, " - rate");		break;
@@ -306,15 +299,12 @@ void VstKarma::setParameter (long index, float value)
 
 			break;
 		case kWaveform1:	currentProgram->waveform1	= value;	break;
-		case kFreq1A:		currentProgram->freq1.attack	= value;	break;
-		case kFreq1D:		currentProgram->freq1.decay	= value;	break;
-		case kFreq1S:		currentProgram->freq1.sustain	= value;	break;
-		case kFreq1R:		currentProgram->freq1.release	= value;	break;
+		case kFreq1:		currentProgram->freq1		= (value*2)-1;	break;
+		case kFreq2:		currentProgram->freq2		= (value*2)-1;	break;
 		case kWaveform2:	currentProgram->waveform2	= value;	break;
-		case kFreq2A:		currentProgram->freq2.attack	= value;	break;
-		case kFreq2D:		currentProgram->freq2.decay	= value;	break;
-		case kFreq2S:		currentProgram->freq2.sustain	= value;	break;
-		case kFreq2R:		currentProgram->freq2.release	= value;	break;
+		case kModEnvA:		currentProgram->modEnv.attack	= value;	break;
+		case kModEnvD:		currentProgram->modEnv.decay	= value;	break;
+		case kModEnvAmount:	currentProgram->modEnvAmount	= (value*2)-1;	break;
 		case kWaveformMix:	currentProgram->waveformMix	= value;	break;
 		case kLFO1:		currentProgram->lfo1.waveform	= value;	break;
 		case kLFO1amount:	currentProgram->lfo1.amount	= value;	break;
@@ -345,6 +335,8 @@ void VstKarma::setParameter (long index, float value)
 			}
 			break;
 	}
+	if (editor)
+		((AEffGUIEditor*)editor)->setParameter (index, value);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -355,15 +347,12 @@ float VstKarma::getParameter (long index)
 	{
 		case kChannel:		value = currentProgram->fChannel;		break;
 		case kWaveform1:	value = currentProgram->waveform1;		break;
-		case kFreq1A:		value = currentProgram->freq1.attack;		break;
-		case kFreq1D:		value = currentProgram->freq1.decay;		break;
-		case kFreq1S:		value = currentProgram->freq1.sustain;		break;
-		case kFreq1R:		value = currentProgram->freq1.release;		break;
+		case kFreq1:		value = (currentProgram->freq1/2.0)+0.5f;	break;
+		case kFreq2:		value = (currentProgram->freq2/2.0)+0.5f;	break;
 		case kWaveform2:	value = currentProgram->waveform2;		break;
-		case kFreq2A:		value = currentProgram->freq2.attack;		break;
-		case kFreq2D:		value = currentProgram->freq2.decay;		break;
-		case kFreq2S:		value = currentProgram->freq2.sustain;		break;
-		case kFreq2R:		value = currentProgram->freq2.release;		break;
+		case kModEnvA:		value = currentProgram->modEnv.attack;		break;
+		case kModEnvD:		value = currentProgram->modEnv.decay;		break;
+		case kModEnvAmount:	value = (currentProgram->modEnvAmount/2.0)+0.5f;break;
 		case kWaveformMix:	value = currentProgram->waveformMix;		break;
 		case kLFO1:		value = currentProgram->lfo1.waveform;		break;
 		case kLFO1amount:	value = currentProgram->lfo1.amount;		break;
