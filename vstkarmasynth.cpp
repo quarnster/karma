@@ -8,15 +8,11 @@
 
 enum
 {
-	kNumFrequencies = 128,	// 128 midi notes
 	kWaveSize = 44100	// samples (must be power of 2 here)
 };
 
-const double midiScaler = (1. / 127.);
-static float fScaler = kWaveSize / 44100.0f;
-//static float sawtooth[kWaveSize];
-//static float pulse[kWaveSize];
-static float freqtab[kNumFrequencies];
+//const double midiScaler = (1. / 127.);
+//static float fScaler = kWaveSize / 44100.0f;
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
@@ -24,7 +20,7 @@ void VstKarma::setSampleRate (float sampleRate)
 {
 	// TODO: check
 	AudioEffectX::setSampleRate(sampleRate);
-	fScaler = (float)((double)kWaveSize / (double)sampleRate);
+//	fScaler = (float)((double)kWaveSize / (double)sampleRate);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -43,38 +39,7 @@ void VstKarma::resume ()
 //-----------------------------------------------------------------------------------------
 void VstKarma::initProcess ()
 {
-//	channel[i].fPhase1 = channel[i].fPhase2 = 0.f;
-	fScaler = (float)((double)kWaveSize / 44100.);	// we don't know the sample rate yet
-//	channel[i].noteIsOn = false;
-//	noteIsOn = false;
-//	currentDelta = 0;
-/*
-	long i;
-
-	// make waveforms
-	long wh = kWaveSize / 4;	// 1:3 pulse
-	for (i = 0; i < kWaveSize; i++)
-	{
-		sawtooth[i] = (float)(-1. + (2. * ((double)i / (double)kWaveSize)));
-		pulse[i] = (i < wh) ? -1.f : 1.f;
-	}
-*/
-	// make frequency (Hz) table
-	double k = 1.059463094359;	// 12th root of 2
-	double a = 6.875;	// a
-	a *= k;	// b
-	a *= k;	// bb
-	a *= k;	// c, frequency of midi note 0
-	for (long i = 0; i < kNumFrequencies; i++)	// 128 midi notes
-	{
-		freqtab[i] = (float)a;
-		a *= k;
-	}
-	char buf[256];
-	sprintf(buf, "max freq: %f\n", freqtab[127]);
-	Debug(buf);
-
-	Debug("done init process\n");
+//	fScaler = (float)((double)kWaveSize / 44100.);	// we don't know the sample rate yet
 }
 
 //-----------------------------------------------------------------------------------------
@@ -123,9 +88,13 @@ long VstKarma::processEvents (VstEvents* ev)
 		} else if (cmd == 0xc0) { // Program change
 			long program = midiData[1] & 0x7f;
 			channel[chn].setProgram(&programs[program]); //setProgram(program);
-		} else if (cmd == 0xb0 && midiData[1] == 0x7e)	// all notes off
-			for (int i = 0; i < 16; i++)
-				channel[i].noteOff();
+		} else if (cmd == 0xb0)	// Channel Mode Messages
+			if (midiData[1] == 120 || midiData[1] >= 123) {
+				// 120 -> All sounds off
+				// 123->127 different all notes off (TODO: implement better)
+				for (int i = 0; i < 16; i++)
+					channel[i].noteOff();
+			}
 		else {
 			char buf[256];
 			sprintf(buf, "other command: %d, %d\n", cmd, midiData[1]);
