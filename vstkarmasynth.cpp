@@ -69,6 +69,7 @@ void VstKarma::processReplacing (float **inputs, float **outputs, long sampleFra
 		for (int i = 0; i < 16; i++) {
 			channel[i].process(bufferL, bufferR, sampleFrames);
 		}
+
 		for (int i = 0; i < sampleFrames; i++) {
 			float samplel = bufferL[i] / 32767.0f;
 			float sampler = bufferR[i] / 32767.0f;
@@ -122,8 +123,8 @@ long VstKarma::processEvents (VstEvents* ev)
 				channel[chn].setParameter(kPan, midiData[2]&0x7f);
 			} else if (midiData[1] == 74) { // cut off
 				channel[chn].setParameter(kFilterCut, midiData[2]&0x7f);
-			} else if (midiData[1] >= 44 && midiData[1] <= 73) {
-				channel[chn].setParameter(midiData[1] - 43, midiData[2]&0x7f);
+			} else if (midiData[1] >= 12) {
+				channel[chn].setParameter(midiData[1] - 12, midiData[2]&0x7f);
 			} else {
 				char buf[256];
 				sprintf(buf, "unimplemented control: %d, %d\n", cmd, midiData[1]);
