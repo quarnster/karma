@@ -157,10 +157,11 @@ void calculateUpdateRates(karma_Program *program, karma_Note *note) {
 }
 
 //-----------------------------------------------------------------------------------------
-void karma_Channel_process(karma_Channel *channel, int *left, int *right, long frames) {
+void karma_Channel_process(karma_Channel *channel, int *left, int *right, long length) {
 	int *lBuf;
 	int *rBuf;
 	int i;
+	int frames = length;
 	karma_Program *program = &channel->program;
 
 	if (channel->active || channel->echoSamples > 0) {
@@ -171,6 +172,9 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long f
 	if (channel->active) {
 		if (program->echoDelay > 1024 && program->echoAmount > 256)
 			channel->echoSamples = program->echoDelay;
+
+		if (channel->events && frames > channel->event[0].deltaFrames)
+			frames = channel->event[0].deltaFrames;
 
 		for (i = 0; i < channel->playing_notes; i++) {
 			karma_Note *note = &channel->note[i];
@@ -369,22 +373,37 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long f
 				tmp *= program->echoAmount;
 				tmp >>= 10;
 				channel->leftEcho[ channel->echoPos ] += tmp;
-				*left++ += channel->leftEcho[ channel->echoPos ];
+				left[i] += channel->leftEcho[ channel->echoPos ];
 
 				channel->rightEcho[ channel->echoPos ] = *rBuf++;
 				tmp = channel->rightEcho[j];
 				tmp *= program->echoAmount;
 				tmp >>= 10;
 				channel->rightEcho[ channel->echoPos ] += tmp;
-				*right++ += channel->rightEcho[ channel->echoPos ];
+				right[i] += channel->rightEcho[ channel->echoPos ];
 				++channel->echoPos;
 			}
 		}
 	} else {
 		for (i = 0; i < frames; i++) {
-			*left++ += *lBuf++;
-			*right++ += *rBuf++;
+			left[i] += *lBuf++;
+			right[i] += *rBuf++;
 		}
+	}
+	for (i = 0; i < channel->events; i++) {
+		channel->event[i].deltaFrames -= frames;
+		if (channel->event[i].deltaFrames <= 0) {
+			karma_Channel_processEvent(channel, &channel->event[i]);
+
+			channel->events--;
+			if (i != channel->events) {
+				memcpy(&channel->event[i], &channel->event[i+1], (channel->events - i) * sizeof(karma_Event));
+				i--;
+			}
+		}
+	}
+	if (frames != length) {
+		karma_Channel_process(channel, &left[frames], &right[frames], length - frames);
 	}
 }
 void debug(char *str) {
@@ -441,21 +460,12 @@ void karma_Channel_noteOn(karma_Channel *channel, long notenum, long velocity, l
 	}
 
 	memset(&channel->note[idx], 0, sizeof(karma_Note));
-//	channel->note[idx].phase1 = channel->note[idx].phase2 = 0;
-//	channel->note[idx].released = FALSE;
 	channel->note[idx].active = TRUE;
 	channel->note[idx].currentNote = notenum;
 	channel->note[idx].noteFreq = (0xffffffff/44100) * freqtab[channel->note[idx].currentNote]; //(440.0f * pow(2.0, (channel->note[idx].currentNote - 69) / 12.0));
-//	channel->note[idx].samplesPlayed = 0;
-//	channel->note[idx].relSample = 0;
 	channel->note[idx].delta = delta;
-//	channel->note[idx].high = channel->note[idx].band = channel->note[idx].low = channel->note[idx].notch = 0;
 
-//	calculateUpdateRates(&channel->program, &channel->note[idx]);
-//	channel->note[idx].freq2UpdateRate = 0;
-//	channel->note[idx].lfo2UpdateRate = 0;
-//	channel->note[idx].lfo1UpdateRate = 0;
-//	channel->note[idx].volumeUpdateRate = 0;
+	calculateUpdateRates(&channel->program, &channel->note[idx]);
 	channel->playing_notes++;
 
 	if (channel->program.echoDelay > 1024 && !channel->leftEcho) {
@@ -463,8 +473,6 @@ void karma_Channel_noteOn(karma_Channel *channel, long notenum, long velocity, l
 		channel->leftEcho = (int*) malloc(MAX_ECHO * 2 * sizeof(int));
 		channel->rightEcho = (int*) malloc(MAX_ECHO * 2 * sizeof(int));
 	}
-
-//	currentVelocity = velocity;
 	channel->active = TRUE;
 }
 
@@ -476,11 +484,6 @@ void karma_Channel_noteOff(karma_Channel *channel, long notenum) {
 			channel->note[i].released = TRUE;
 			channel->note[i].relSample = channel->note[i].samplesPlayed;
 			calculateUpdateRates(&channel->program, &channel->note[i]);
-			channel->note[i].freq2UpdateRate = 0;
-			channel->note[i].lfo2UpdateRate = 0;
-			channel->note[i].lfo1UpdateRate = 0;
-			channel->note[i].volumeUpdateRate = 0;
-
 			break;
 		}
 	}
@@ -493,6 +496,53 @@ void karma_Channel_allNotesOff(karma_Channel *channel) {
 		channel->note[i].released = TRUE;
 		channel->note[i].relSample = channel->note[i].samplesPlayed;
 		calculateUpdateRates(&channel->program, &channel->note[i]);
+	}
+}
+
+//-----------------------------------------------------------------------------------------
+void karma_Channel_processEvent(karma_Channel *channel, karma_Event *event) {
+	long cmd = event->data[0] & 0xf0;
+
+	if (cmd == 0x80) {	// note off
+		long note = event->data[1] & 0x7f;
+		karma_Channel_noteOff(channel, note);
+	} else if (cmd == 0xb0)	{// Channel Mode Messages
+		 if (event->data[1] == 7) { // volume change
+			karma_Program_setParameter(&channel->program, kGain, (event->data[2]&0x7f) / 127.0f);
+		} else if (event->data[1] == 10) { // pan change
+			float value = (event->data[2]&0x7f) / 127.0f;
+			channel->panl = sqrt(1.0f-value) * 1024;
+			channel->panl = sqrt(value) * 1024;
+		} else if (event->data[1] == 74) { // cut off
+			karma_Program_setParameter(&channel->program, kFilterCut, (event->data[2]&0x7f) / 127.0f);
+		} else if (event->data[1] >= 12) {
+			karma_Program_setParameter(&channel->program, event->data[1] - 12, (event->data[2]&0x7f) / 127.0f);
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------------------
+void karma_Channel_addEvent(karma_Channel *channel, karma_Event *event) {
+	long cmd = event->data[0] & 0xf0;
+
+	if (channel->events == MAX_EVENTS && cmd != 0x90 && event->deltaFrames) {
+		debug("warning: maximum number of events used... this event will be discarded\n");
+		return;
+	}
+
+	if (cmd == 0x90)	{	// note on
+		long note = event->data[1] & 0x7f;
+		long velocity = event->data[2] & 0x7f;
+		if (velocity == 0) {
+			debug ("0 velocity\n");
+			karma_Channel_noteOff(channel, note);
+		} else 
+			karma_Channel_noteOn(channel, note, velocity, event->deltaFrames);
+	} else if (!event->deltaFrames) {
+		karma_Channel_processEvent(channel, event);
+	} else {
+		memcpy(&channel->event[channel->events], event, sizeof(karma_Event));
+		channel->events++;
 	}
 }
 //-----------------------------------------------------------------------------------------
