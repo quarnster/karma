@@ -534,7 +534,6 @@ void karma_Channel_addEvent(karma_Channel *channel, karma_Event *event) {
 		long note = event->data[1] & 0x7f;
 		long velocity = event->data[2] & 0x7f;
 		if (velocity == 0) {
-			debug ("0 velocity\n");
 			karma_Channel_noteOff(channel, note);
 		} else 
 			karma_Channel_noteOn(channel, note, velocity, event->deltaFrames);

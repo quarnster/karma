@@ -105,7 +105,6 @@ long VstKarma::processEvents (VstEvents* ev)
 		kevent.data[2] = midiData[2];
 		kevent.deltaFrames = event->deltaFrames;
 		if (cmd == 0xb0 && (midiData[1] == 120 || midiData[1] >= 123)) {
-			VstKarma::Debug("all notes off\n");
 			for (int i = 0; i < 16; i++)
 				karma_Channel_allNotesOff(&channel[i]);
 		} else {
