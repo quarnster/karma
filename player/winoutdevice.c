@@ -7,7 +7,7 @@
 int m_currentBuffer = 0;
 WAVEHDR m_waveHeader[REPLAY_NBSOUNDBUFFER];
 HWAVEOUT m_hWaveOut;
-bool closing = false;
+BOOL closing = FALSE;
 short soundBuffer[BUFFERSIZE * 2 * REPLAY_NBSOUNDBUFFER];
 
 static __declspec(align(32)) int bufferL[BUFFERSIZE];
@@ -16,6 +16,9 @@ static __declspec(align(32)) int bufferR[BUFFERSIZE];
 
 // Internal WaveOut API callback function. We just call our sound handler ("playNextBuffer")
 void	fillNextBuffer() {
+	int pos;
+	int i;
+
 	if (closing) return;
 	// check if the buffer is already prepared (should not !)
 	if (m_waveHeader[m_currentBuffer].dwFlags&WHDR_PREPARED)
@@ -25,8 +28,8 @@ void	fillNextBuffer() {
 	memset(&bufferR, 0, BUFFERSIZE * sizeof(int));
 
 	karma_process(ksong, bufferL, bufferR, BUFFERSIZE);
-	int pos = m_currentBuffer * BUFFERSIZE * 2;
-	for (int i = 0; i < BUFFERSIZE; i++) {
+	pos = m_currentBuffer * BUFFERSIZE * 2;
+	for (i = 0; i < BUFFERSIZE; i++) {
 		int samplel = bufferL[i];
 		int sampler = bufferR[i];
 
@@ -58,6 +61,7 @@ static void CALLBACK waveOutProc(HWAVEOUT hwo,UINT uMsg,DWORD dwInstance,DWORD d
 }
 
 int deviceOpen() {
+	int i;
 	WAVEFORMATEX pcmWaveFormat;
 
 	short chn = 2;
@@ -73,7 +77,7 @@ int deviceOpen() {
 	pcmWaveFormat.cbSize = sizeof(WAVEFORMATEX);
 
 
-	int s = waveOutOpen(
+	waveOutOpen(
 		&m_hWaveOut,
 		-1,
 		&pcmWaveFormat,
@@ -82,16 +86,17 @@ int deviceOpen() {
 		CALLBACK_FUNCTION);
 
 	m_currentBuffer = 0;
-	for (int i = 0; i < REPLAY_NBSOUNDBUFFER; i++) {
+	for (i = 0; i < REPLAY_NBSOUNDBUFFER; i++) {
 		fillNextBuffer();
 	}
 
 	return 0;
 }
 void deviceClose() {
-	closing = true;
+	int i = 0;
+	closing = TRUE;
 	waveOutReset(m_hWaveOut);
-	for (int i=0;i<REPLAY_NBSOUNDBUFFER;i++) {
+	for (i = 0; i < REPLAY_NBSOUNDBUFFER; i++) {
 		if ((m_waveHeader[i].dwFlags&WHDR_PREPARED) != 0)
 			waveOutUnprepareHeader(m_hWaveOut, &m_waveHeader[i], sizeof(WAVEHDR));
 	}
@@ -99,8 +104,7 @@ void deviceClose() {
 	waveOutClose(m_hWaveOut);
 }
 
-void deviceMainLoop() {
+void deviceUpdate() {
 	// winout handles itself...
-	getch();
 }
 
