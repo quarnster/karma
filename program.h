@@ -4,9 +4,13 @@
 #include "ADSR.h"
 #include "LFO.h"
 
+//typedef ((int) 
 typedef struct {
 	int waveform1;
 	int waveform2;
+
+	WAVEFORM_CALLBACK waveform1Function;
+	WAVEFORM_CALLBACK waveform2Function;
 
 	int wavelen1;
 	int wavelen2;
@@ -26,7 +30,7 @@ typedef struct {
 //	ADSR volume2;
 
 
-	float filter;
+	int filter;
 	float resonance;
 	float cut;
 	float adsrAmount;
