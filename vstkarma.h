@@ -2,7 +2,7 @@
 #define __INCLUDED_KARMA_VSTKARMA_H
 
 #include <string.h>
-#include "vst/audioeffectx.h"
+#include "D:\CODE\vst\vstsdk2.3\vstsdk2.3\source\common\audioeffectx.h"
 
 #include "VstProgram.h"
 #include "VstChannel.h"
@@ -20,11 +20,6 @@ enum
 	kFreq1S,
 	kFreq1R,
 
-	kVolume1A,
-	kVolume1D,
-	kVolume1S,
-	kVolume1R,
-
 	kWaveform2,
 
 	kFreq2A,
@@ -32,22 +27,20 @@ enum
 	kFreq2S,
 	kFreq2R,
 
-	kVolume2A,
-	kVolume2D,
-	kVolume2S,
-	kVolume2R,
-/*
-	kWaveform2,
-	kFreq2,
-	kVolume2,
-*/
+	kWaveformMix,
 
+	kLFO1,
+	kLFO1rate,
+	kLFO1amount,
+
+	kLFO2,
+	kLFO2rate,
+	kLFO2amount,
 
 	kFilterType,
-	kFilterResA,
-	kFilterResD,
-	kFilterResS,
-	kFilterResR,
+	kFilterRes,
+	kFilterCut,
+	kFilterADSRAmount,
 
 	kFilterCutA,
 	kFilterCutD,
@@ -55,7 +48,11 @@ enum
 	kFilterCutR,
 
 	kDistortion,
-	kVolume,
+	kAmplifierA,
+	kAmplifierD,
+	kAmplifierS,
+	kAmplifierR,
+	kGain,
 
 	kTest,
 

@@ -10,20 +10,33 @@
 //-----------------------------------------------------------------------------------------
 Channel::Channel() {
 	program = NULL;
-	currentNote = -1;
-	released = true;
-	active = false;
-	samplesPlayed = 0;
-	relSample = -1;
+	playing_notes = 0;
+
+	for (int i = 0; i < MAX_NOTES; i++) {
+		note[i].currentNote = -1;
+		note[i].released = true;
+		note[i].active = active = false;
+		note[i].samplesPlayed = 0;
+		note[i].relSample = -1;
+	}
 	high = band = low = notch = 0;
 }
 
 //-----------------------------------------------------------------------------------------
 float Channel::getSample(float wave, float phase) {
 	float limit = 44100;
-	float sample = -1 + (2 * (phase/limit));
-	if (wave < 0.2)					// off
-		return 0;
+	float pl = phase / limit;
+	float sample = -1 + (2 * (pl));
+	if (wave < 0.2) {				// tri
+		if (pl > 0.75) {
+			sample = -1 + (pl - 0.75) * 4;
+		} else if (pl < 0.25) {
+			sample = pl * 4;
+		} else {
+			sample = 1 - (pl - 0.25) * 4;
+		}
+		return sample;
+	}
 	else if (wave < 0.4)				// saw
 		return sample;
 	else if (wave < 0.6)				// square
@@ -35,106 +48,154 @@ float Channel::getSample(float wave, float phase) {
 }
 
 //-----------------------------------------------------------------------------------------
-void Channel::process(float *out1, long sampleFrames) {
+void Channel::process(float *out1, long frames) {
 	if (active) {
-		float noteFreq = 440.0f * powf(2.0, (currentNote - 69) / 12.0)/*freqtab[currentNote & 0x7f]*/;
+		for (int i = 0; i < playing_notes; i++) {
+			unsigned int pos = 0;
+			long sampleFrames = frames;
+			float noteFreq = 440.0f * powf(2.0, (note[i].currentNote - 69) / 12.0)/*freqtab[currentNote & 0x7f]*/;
+			float lfo1 = getSample(program->lfo1.waveform, program->lfo1.fPhase) * program->lfo1.amount * 80;
+			float lfo2 = getSample(program->lfo2.waveform, program->lfo2.fPhase) * program->lfo2.amount * 1024;
 
-		float freq1 = noteFreq * program->freq1.getValue(samplesPlayed, relSample);	// not really linear...
-		float freq2 = noteFreq * program->freq2.getValue(samplesPlayed, relSample);
-		float vol = (float)(program->volume /** (double)currentVelocity*/ /** midiScaler*/);
+			float freq1 = noteFreq * program->freq1.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;	// not really linear...
+			float freq2 = noteFreq * program->freq2.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;
+	//		float gain = (float)(program->gain /** (double)currentVelocity*/ /** midiScaler*/);
 
-		if (currentDelta >= 0)
-		{
-			out1 += currentDelta;
-			sampleFrames -= currentDelta;
-			currentDelta = 0;
-		}
-
-		float cut = program->filterCut.getValue(samplesPlayed, relSample)*8192;
-		float res = program->filterRes.getValue(samplesPlayed, relSample);
-		float f = (float) (2 * sin(3.1415927f * cut / 44100));
-		float q = res;
-		float scale = res;
-		float dist = (program->distortion*100);
-
-		// loop
-		while (--sampleFrames >= 0)
-		{
-			float limit = 44100;
-
-			float sample = getSample(program->waveform1, fPhase1);
-			float vol1 = program->volume1.getValue(samplesPlayed, relSample) * vol;
-			float sample2 = getSample(program->waveform2, fPhase2);
-			float vol2 = program->volume2.getValue(samplesPlayed, relSample)* vol;
-
-			sample = sample * vol1 + sample2 * vol2;
-
-			if (abs(vol1 + vol2) < 0.01 && released)
-				active = false;
-
-			low = low + f * band;
-			high = scale * sample - low - q * band;
-			band = f * high + band;
-			notch = high + low;
-
-			if (program->filter < .20)
-				sample = sample; // TODO: fix...
-			else if (program->filter < 0.4)
-				sample = low;
-			else if (program->filter < 0.6)
-				sample = high;
-			else if (program->filter < 0.8)
-				sample = band;
-			else
-				sample = notch;
-			cut = program->filterCut.getValue(samplesPlayed, relSample)*8192;
-			res = program->filterRes.getValue(samplesPlayed, relSample);
-
-			f = (float) (2 * sinf(3.141592f * cut / 44100));
-			q = res;
-			scale = res;
-
-			if (dist > 0.0) {
-				sample *= dist;
-				float clamp = vol1 > vol2 ? vol1 : vol2;
-				sample = sample > clamp ? clamp : sample < -clamp ? -clamp : sample;
+			if (note[i].delta >= 0)
+			{
+				pos += note[i].delta;
+				sampleFrames -= note[i].delta;
+				note[i].delta = 0;
 			}
-			(*out1++) += sample;//wave1[(long)fPhase1 & mask] * fVolume1 * vol;
-			fPhase1 += freq1;
-			fPhase2 += freq2;
 
-//			fPhase1 %= 44100;
-//			fPhase2 %= 44100;
-			while (fPhase1 > limit) fPhase1 -= limit;
-			while (fPhase2 > limit) fPhase2 -= limit;
+			float cut = (program->cut + program->adsrAmount * program->filterCut.getValue(note[i].samplesPlayed, note[i].relSample))*8192 + lfo2;
+			float res = program->resonance; //program->filterRes.getValue(note[i].samplesPlayed, note[i].relSample);
+			float f = (float) (2 * sin(3.1415927f * cut / 44100));
+			float q = res;
+			float scale = res;
+			float dist = (program->distortion*20);
 
-			samplesPlayed++;
-			freq1 = noteFreq * program->freq1.getValue(samplesPlayed, relSample);
-			freq2 = noteFreq * program->freq2.getValue(samplesPlayed, relSample);
+			// loop
+			while (--sampleFrames >= 0)
+			{
+				float limit = 44100;
+
+				float sample = getSample(program->waveform1, note[i].fPhase1);
+				float sample2 = getSample(program->waveform2, note[i].fPhase2);
+
+				sample = sample * (1-program->waveformMix) + sample2 * program->waveformMix;
+
+
+				low = low + f * band;
+				high = scale * sample - low - q * band;
+				band = f * high + band;
+				notch = high + low;
+
+				if (program->filter < .20)
+					sample = sample; // TODO: fix...
+				else if (program->filter < 0.4)
+					sample = low;
+				else if (program->filter < 0.6)
+					sample = high;
+				else if (program->filter < 0.8)
+					sample = band;
+				else
+					sample = notch;
+				cut = (program->cut + program->adsrAmount * program->filterCut.getValue(note[i].samplesPlayed, note[i].relSample))*8192 + lfo2;
+//				res = program->filterRes.getValue(note[i].samplesPlayed, note[i].relSample);
+
+				f = (float) (2 * sinf(3.141592f * cut / 44100));
+				q = res;
+				scale = res;
+
+				if (dist > 0.0) {
+					sample *= dist;
+					float clamp = 1; //vol1 > vol2 ? vol1 : vol2;
+					sample = sample > clamp ? clamp : sample < -clamp ? -clamp : sample;
+				}
+
+				float vol = program->amplifier.getValue(note[i].samplesPlayed, note[i].relSample) * program->gain;
+				sample *= vol;
+				out1[pos++] += sample;
+
+				note[i].fPhase1 += freq1;
+				note[i].fPhase2 += freq2;
+
+				// TODO: fix these two
+				program->lfo1.fPhase += program->lfo1.rate*20;
+				program->lfo2.fPhase += program->lfo2.rate*20;
+
+				while (note[i].fPhase1 > limit) note[i].fPhase1 -= limit;
+				while (note[i].fPhase2 > limit) note[i].fPhase2 -= limit;
+				while (program->lfo1.fPhase > limit) program->lfo1.fPhase -= limit;
+				while (program->lfo2.fPhase > limit) program->lfo2.fPhase -= limit;
+
+				note[i].samplesPlayed++;
+				lfo1 = getSample(program->lfo1.waveform, program->lfo1.fPhase) * program->lfo1.amount * 80;
+				lfo2 = getSample(program->lfo2.waveform, program->lfo2.fPhase) * program->lfo2.amount * 1024;
+				freq1 = noteFreq * program->freq1.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;
+				freq2 = noteFreq * program->freq2.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;
+
+				if (vol < 0.01 && note[i].released) {
+					// this notes volume is too low to hear and the note has been released
+					// so remove it from the playing notes
+					note[i].active = false;
+					playing_notes--;
+
+					if (i != playing_notes) {
+						// there are notes after this note that needs to be moved "up"
+						// just copy the last note into this space.
+						// the note in this place needs to be played again so i--
+						memcpy(&note[i], &note[playing_notes], sizeof(karma_Note));
+						i--;
+					}
+
+					if (playing_notes <= 0) // no notes playing in the channel
+						active = false;
+					break;
+				}
+			}
+
 		}
 	}
 }
 
 //-----------------------------------------------------------------------------------------
-void Channel::noteOn(long note, long velocity, long delta)
+void Channel::noteOn(long notenum, long velocity, long delta)
 {
 	if (program == NULL) {
 		VstKarma::Debug("program == null");
 		return;
 	}
-	fPhase1 = fPhase2 = 0;
-	currentNote = note;
+
+	if (playing_notes == MAX_NOTES) {
+		VstKarma::Debug("Maximum number of notes allready playing");
+	}
+
+	note[playing_notes].fPhase1 = note[playing_notes].fPhase2 = 0;
+	note[playing_notes].released = false;
+	note[playing_notes].active = true;
+	note[playing_notes].currentNote = notenum;
+	note[playing_notes].samplesPlayed = 0;
+	note[playing_notes].relSample = -1;
+	note[playing_notes].delta = delta;
+
+	playing_notes++;
+
+	program->lfo1.fPhase = 0;
 	currentVelocity = velocity;
-	currentDelta = delta;
-	released = false;
+//	currentDelta = delta;
 	active = true;
-	samplesPlayed = 0;
-	relSample = -1;
 	high = band = low = notch = 0;
 }
 
 //-----------------------------------------------------------------------------------------
-void Channel::noteOff() {
-	released = true;
-	relSample = samplesPlayed;
+void Channel::noteOff(long notenum) {
+	for (int i = 0; i < playing_notes; i++) {
+		if (note[i].currentNote == notenum) {
+			note[i].released = true;
+			note[i].relSample = note[i].samplesPlayed;
+			break;
+		}
+	}
 }

@@ -2,6 +2,7 @@
 #define __INCLUDED_KARMA_PROGRAM_H
 
 #include "ADSR.h"
+#include "LFO.h"
 
 class Program {
 public:
@@ -10,16 +11,25 @@ public:
 	ADSR freq1;
 	ADSR freq2;
 
-	ADSR volume1;
-	ADSR volume2;
+	float waveformMix;
 
-	float volume;
+	LFO lfo1;
+	LFO lfo2;
+//	ADSR volume1;
+//	ADSR volume2;
+
 
 	float filter;
-	ADSR filterRes;
+	float resonance;
+	float cut;
+	float adsrAmount;
+//	ADSR filterRes;
 	ADSR filterCut;
 
 	float distortion;
+
+	ADSR amplifier;
+	float gain;
 };
 
 

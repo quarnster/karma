@@ -85,6 +85,9 @@ void VstKarma::getParameterLabel (long index, char *label)
 	switch (index)
 	{
 //		case kChannel:		strcpy (label, " Channel");		break;
+		case kLFO1:
+		case kLFO2:
+
 		case kWaveform1:
 		case kWaveform2:	strcpy (label, " Shape  ");		break;
 		case kFilterType:	strcpy (label, "  Type  ");		break;
@@ -98,24 +101,24 @@ void VstKarma::getParameterLabel (long index, char *label)
 		case kFilterCutA:
 		case kFilterCutD:
 		case kFilterCutR:
-		case kFilterResA:
-		case kFilterResD:
-		case kFilterResR:
-		case kVolume1A:
-		case kVolume1D:
-		case kVolume1R:
-		case kVolume2A:
-		case kVolume2D:
-		case kVolume2R: 	strcpy (label, "   Sec   ");		break;
+		case kAmplifierA:
+		case kAmplifierD:
+		case kAmplifierR: 	strcpy (label, "   Sec   ");		break;
 
 //		case kVolume2:
-		case kFilterResS:
+		case kLFO1rate:
+		case kLFO2rate:
+		case kFilterRes:
+		case kFilterADSRAmount:
+		case kFilterCut:
 		case kFreq1S:
 		case kFreq2S:
 		case kFilterCutS:	strcpy (label, "  Hz  ");		break;
-		case kVolume1S:
-		case kVolume2S:
-		case kVolume:		strcpy (label, "   dB   ");		break;
+
+		case kAmplifierS:
+		case kLFO1amount:
+		case kLFO2amount:
+		case kGain:		strcpy (label, "   dB   ");		break;
 	}
 }
 
@@ -142,7 +145,7 @@ void VstKarma::getParameterDisplay(long index, char *text)
 
 		case kWaveform1:
 			if (currentProgram->waveform1 < .20)
-				strcpy(text, "Off");
+				strcpy(text, "Triangle");
 			else if (currentProgram->waveform1 < 0.4)
 				strcpy(text, "Sawtooth");
 			else if (currentProgram->waveform1 < 0.6)
@@ -154,7 +157,7 @@ void VstKarma::getParameterDisplay(long index, char *text)
 			break;
 		case kWaveform2:
 			if (currentProgram->waveform2 < .20)
-				strcpy(text, "Off");
+				strcpy(text, "Triangle");
 			else if (currentProgram->waveform2 < 0.4)
 				strcpy(text, "Sawtooth");
 			else if (currentProgram->waveform2 < 0.6)
@@ -165,37 +168,61 @@ void VstKarma::getParameterDisplay(long index, char *text)
 				strcpy(text, "  Noise ");
 			break;
 
+		case kLFO1:
+			if (currentProgram->lfo1.waveform < .20)
+				strcpy(text, "Triangle");
+			else if (currentProgram->lfo1.waveform < 0.4)
+				strcpy(text, "Sawtooth");
+			else if (currentProgram->lfo1.waveform < 0.6)
+				strcpy(text, " Square ");
+			else if (currentProgram->lfo1.waveform < 0.8)
+				strcpy(text, "  Sine  ");
+			else
+				strcpy(text, "  Noise ");
+			break;
+		case kLFO2:
+			if (currentProgram->lfo2.waveform < .20)
+				strcpy(text, "Triangle");
+			else if (currentProgram->lfo2.waveform < 0.4)
+				strcpy(text, "Sawtooth");
+			else if (currentProgram->lfo2.waveform < 0.6)
+				strcpy(text, " Square ");
+			else if (currentProgram->lfo2.waveform < 0.8)
+				strcpy(text, "  Sine  ");
+			else
+				strcpy(text, "  Noise ");
+			break;
+		case kLFO1amount:	float2string(currentProgram->lfo1.amount, text);	break;
+		case kLFO1rate:		float2string(currentProgram->lfo1.rate, text);		break;
+		case kLFO2amount:	float2string(currentProgram->lfo2.amount, text);	break;
+		case kLFO2rate:		float2string(currentProgram->lfo2.rate, text);		break;
+		case kWaveformMix:	float2string(currentProgram->waveformMix, text);	break;
 		case kFilterCutS:	float2string(currentProgram->filterCut.sustain, text);	break;
-		case kFilterResS:	float2string(currentProgram->filterRes.sustain, text);	break;
+		case kFilterCut:	float2string(currentProgram->cut, text);		break;
+		case kFilterRes:	float2string(currentProgram->resonance, text);		break;
+		case kFilterADSRAmount:	float2string(currentProgram->adsrAmount, text);		break;
 		case kFreq1S:		float2string(currentProgram->freq1.sustain, text);	break;
 		case kFreq2S:		float2string(currentProgram->freq2.sustain, text);	break;
-		case kVolume1S:		dB2string(currentProgram->volume1.sustain, text);	break;
-		case kVolume2S:		dB2string(currentProgram->volume2.sustain, text);	break;
+		case kAmplifierS:	dB2string(currentProgram->amplifier.sustain, text);	break;
 
-		case kVolume:		dB2string (currentProgram->volume, text);		break;
+		case kGain:		dB2string (currentProgram->gain, text);		break;
 
 		case kFilterCutA:	value = currentProgram->filterCut.attack;	break;
 		case kFilterCutD:	value = currentProgram->filterCut.decay;	break;
 		case kFilterCutR:	value = currentProgram->filterCut.release;	break;
-		case kFilterResA:	value = currentProgram->filterRes.attack;	break;
-		case kFilterResD:	value = currentProgram->filterRes.decay;	break;
-		case kFilterResR:	value = currentProgram->filterRes.release;	break;
 		case kFreq1A:		value = currentProgram->freq1.attack;		break;
 		case kFreq1D:		value = currentProgram->freq1.decay;		break;
 		case kFreq1R:		value = currentProgram->freq1.release;		break;
 		case kFreq2A:		value = currentProgram->freq2.attack;		break;
 		case kFreq2D:		value = currentProgram->freq2.decay;		break;
 		case kFreq2R:		value = currentProgram->freq2.release;		break;
-		case kVolume1A:		value = currentProgram->volume1.attack;		break;
-		case kVolume1D:		value = currentProgram->volume1.decay;		break;
-		case kVolume1R:		value = currentProgram->volume1.release;	break;
-		case kVolume2A:		value = currentProgram->volume2.attack;		break;
-		case kVolume2D:		value = currentProgram->volume2.decay;		break;
-		case kVolume2R:		value = currentProgram->volume2.release;	break;
+		case kAmplifierA:	value = currentProgram->amplifier.attack;	break;
+		case kAmplifierD:	value = currentProgram->amplifier.decay;	break;
+		case kAmplifierR:	value = currentProgram->amplifier.release;	break;
 		case kDistortion:	value = currentProgram->distortion;		break;
 
 		case kTest:
-			if (!channel[currentProgram->channel].released) {
+			if (!channel[currentProgram->channel].note[0].released) {
 				strcpy(text, "  On  ");
 			} else {
 				strcpy(text, "  Off  ");
@@ -222,30 +249,34 @@ void VstKarma::getParameterName (long index, char *label)
 		case kFreq1D:		strcpy (label, " - decay");		break;
 		case kFreq1S:		strcpy (label, " - sustain");		break;
 		case kFreq1R:		strcpy (label, " - release");		break;
-		case kVolume1A:		strcpy (label, " - Vol attack");	break;
-		case kVolume1D:		strcpy (label, " - Vol decay");		break;
-		case kVolume1S:		strcpy (label, " - Vol sustain");	break;
-		case kVolume1R:		strcpy (label, " - Vol release");	break;
 		case kWaveform2:	strcpy (label, " Wave 2 ");		break;
 		case kFreq2A:		strcpy (label, " - attack");		break;
 		case kFreq2D:		strcpy (label, " - decay");		break;
 		case kFreq2S:		strcpy (label, " - sustain");		break;
 		case kFreq2R:		strcpy (label, " - release");		break;
-		case kVolume2A:		strcpy (label, " - Vol attack");	break;
-		case kVolume2D:		strcpy (label, " - Vol decay");		break;
-		case kVolume2S:		strcpy (label, " - Vol sustain");	break;
-		case kVolume2R:		strcpy (label, " - Vol release");	break;
-		case kVolume:		strcpy (label, " General volume ");	break;
+		case kWaveformMix:	strcpy (label, "Waveform mix");		break;
+		case kLFO1:		strcpy (label, "LFO 1");		break;
+		case kLFO1amount:	strcpy (label, " - amount");		break;
+		case kLFO1rate:		strcpy (label, " - rate");		break;
+		case kLFO2:		strcpy (label, "LFO 2");		break;
+		case kLFO2amount:	strcpy (label, " - amount");		break;
+		case kLFO2rate:		strcpy (label, " - rate");		break;
+
 		case kFilterType:	strcpy (label, " Filter type");		break;
 		case kFilterCutA:	strcpy (label, " - Cut attack");	break;
 		case kFilterCutD:	strcpy (label, " - Cut decay");		break;
 		case kFilterCutS:	strcpy (label, " - Cut sustain");	break;
 		case kFilterCutR:	strcpy (label, " - Cut release");	break;
-		case kFilterResA:	strcpy (label, " - Res attack");	break;
-		case kFilterResD:	strcpy (label, " - Res decay");		break;
-		case kFilterResS:	strcpy (label, " - Res sustain");	break;
-		case kFilterResR:	strcpy (label, " - Res release");	break;
+		case kFilterRes:	strcpy (label, " - Resonance");		break;
+		case kFilterCut:	strcpy (label, " - Cut");		break;
+		case kFilterADSRAmount:	strcpy (label, " - ADSR Amount");	break;
 		case kDistortion:	strcpy (label, " Distortion  ");	break;
+		case kAmplifierA:	strcpy (label, " Amp attack ");		break;
+		case kAmplifierD:	strcpy (label, " Amp decay ");		break;
+		case kAmplifierS:	strcpy (label, " Amp sustain ");	break;
+		case kAmplifierR:	strcpy (label, " Amp release ");	break;
+		case kGain:		strcpy (label, " Gain ");		break;
+
 		case kTest:		strcpy (label, " Test");		break;
 
 	}
@@ -279,36 +310,38 @@ void VstKarma::setParameter (long index, float value)
 		case kFreq1D:		currentProgram->freq1.decay	= value;	break;
 		case kFreq1S:		currentProgram->freq1.sustain	= value;	break;
 		case kFreq1R:		currentProgram->freq1.release	= value;	break;
-		case kVolume1A:		currentProgram->volume1.attack	= value;	break;
-		case kVolume1D:		currentProgram->volume1.decay	= value;	break;
-		case kVolume1S:		currentProgram->volume1.sustain	= value;	break;
-		case kVolume1R:		currentProgram->volume1.release	= value;	break;
 		case kWaveform2:	currentProgram->waveform2	= value;	break;
 		case kFreq2A:		currentProgram->freq2.attack	= value;	break;
 		case kFreq2D:		currentProgram->freq2.decay	= value;	break;
 		case kFreq2S:		currentProgram->freq2.sustain	= value;	break;
 		case kFreq2R:		currentProgram->freq2.release	= value;	break;
-		case kVolume2A:		currentProgram->volume2.attack	= value;	break;
-		case kVolume2D:		currentProgram->volume2.decay	= value;	break;
-		case kVolume2S:		currentProgram->volume2.sustain	= value;	break;
-		case kVolume2R:		currentProgram->volume2.release	= value;	break;
-		case kVolume:		currentProgram->volume		= value;	break;
+		case kWaveformMix:	currentProgram->waveformMix	= value;	break;
+		case kLFO1:		currentProgram->lfo1.waveform	= value;	break;
+		case kLFO1amount:	currentProgram->lfo1.amount	= value;	break;
+		case kLFO1rate:		currentProgram->lfo1.rate	= value;	break;
+		case kLFO2:		currentProgram->lfo2.waveform	= value;	break;
+		case kLFO2amount:	currentProgram->lfo2.amount	= value;	break;
+		case kLFO2rate:		currentProgram->lfo2.rate	= value;	break;
 		case kFilterType:	currentProgram->filter		= value;	break;
-		case kFilterResA:	currentProgram->filterRes.attack = value;	break;
-		case kFilterResD:	currentProgram->filterRes.decay = value;	break;
-		case kFilterResS:	currentProgram->filterRes.sustain = value;	break;
-		case kFilterResR:	currentProgram->filterRes.release = value;	break;
-		case kFilterCutA:	currentProgram->filterCut.attack = value;	break;
-		case kFilterCutD:	currentProgram->filterCut.decay = value;	break;
+		case kFilterRes:	currentProgram->resonance	= value;	break;
+		case kFilterCut:	currentProgram->cut		= value;	break;
+		case kFilterADSRAmount:	currentProgram->adsrAmount	= value;	break;
+		case kFilterCutA:	currentProgram->filterCut.attack  = value;	break;
+		case kFilterCutD:	currentProgram->filterCut.decay   = value;	break;
 		case kFilterCutS:	currentProgram->filterCut.sustain = value;	break;
 		case kFilterCutR:	currentProgram->filterCut.release = value;	break;
-		case kDistortion:	currentProgram->distortion = value;		break;
+		case kDistortion:	currentProgram->distortion	  = value;	break;
+		case kAmplifierA:	currentProgram->amplifier.attack  = value;	break;
+		case kAmplifierD:	currentProgram->amplifier.decay   = value;	break;
+		case kAmplifierS:	currentProgram->amplifier.sustain = value;	break;
+		case kAmplifierR:	currentProgram->amplifier.release = value;	break;
+		case kGain:		currentProgram->gain		  = value;	break;
 
 		case kTest:
-			if (value > .5 && channel[currentProgram->channel].released) {
+			if (value > .5 && channel[currentProgram->channel].note[0].released) {
 				channel[currentProgram->channel].noteOn (0x40, 0x64, 0);
-			} else if (value <= 0.5 && !channel[currentProgram->channel].released) {
-				channel[currentProgram->channel].noteOff();
+			} else if (value <= 0.5 && !channel[currentProgram->channel].note[0].released) {
+				channel[currentProgram->channel].noteOff(0x40);
 			}
 			break;
 	}
@@ -326,32 +359,34 @@ float VstKarma::getParameter (long index)
 		case kFreq1D:		value = currentProgram->freq1.decay;		break;
 		case kFreq1S:		value = currentProgram->freq1.sustain;		break;
 		case kFreq1R:		value = currentProgram->freq1.release;		break;
-		case kVolume1A:		value = currentProgram->volume1.attack;		break;
-		case kVolume1D:		value = currentProgram->volume1.decay;		break;
-		case kVolume1S:		value = currentProgram->volume1.sustain;	break;
-		case kVolume1R:		value = currentProgram->volume1.release;	break;
 		case kWaveform2:	value = currentProgram->waveform2;		break;
 		case kFreq2A:		value = currentProgram->freq2.attack;		break;
 		case kFreq2D:		value = currentProgram->freq2.decay;		break;
 		case kFreq2S:		value = currentProgram->freq2.sustain;		break;
 		case kFreq2R:		value = currentProgram->freq2.release;		break;
-		case kVolume2A:		value = currentProgram->volume2.attack;		break;
-		case kVolume2D:		value = currentProgram->volume2.decay;		break;
-		case kVolume2S:		value = currentProgram->volume2.sustain;	break;
-		case kVolume2R:		value = currentProgram->volume2.release;	break;
-		case kVolume:		value = currentProgram->volume;			break;
+		case kWaveformMix:	value = currentProgram->waveformMix;		break;
+		case kLFO1:		value = currentProgram->lfo1.waveform;		break;
+		case kLFO1amount:	value = currentProgram->lfo1.amount;		break;
+		case kLFO1rate:		value = currentProgram->lfo1.rate;		break;
+		case kLFO2:		value = currentProgram->lfo2.waveform;		break;
+		case kLFO2amount:	value = currentProgram->lfo2.amount;		break;
+		case kLFO2rate:		value = currentProgram->lfo2.rate;		break;
 		case kFilterType:	value = currentProgram->filter;			break;
-		case kFilterResA:	value = currentProgram->filterRes.attack;	break;
-		case kFilterResD:	value = currentProgram->filterRes.decay;	break;
-		case kFilterResS:	value = currentProgram->filterRes.sustain;	break;
-		case kFilterResR:	value = currentProgram->filterRes.release;	break;
+		case kFilterRes:	value = currentProgram->resonance;		break;
+		case kFilterCut:	value = currentProgram->cut;			break;
+		case kFilterADSRAmount:	value = currentProgram->adsrAmount;		break;
 		case kFilterCutA:	value = currentProgram->filterCut.attack;	break;
 		case kFilterCutD:	value = currentProgram->filterCut.decay;	break;
 		case kFilterCutS:	value = currentProgram->filterCut.sustain;	break;
 		case kFilterCutR:	value = currentProgram->filterCut.release;	break;
 		case kDistortion:	value = currentProgram->distortion;		break;
+		case kAmplifierA:	value = currentProgram->amplifier.attack;	break;
+		case kAmplifierD:	value = currentProgram->amplifier.decay;	break;
+		case kAmplifierS:	value = currentProgram->amplifier.sustain;	break;
+		case kAmplifierR:	value = currentProgram->amplifier.release;	break;
+		case kGain:		value = currentProgram->gain;			break;
 		case kTest:
-				value = !channel[currentProgram->channel].released;
+				value = !channel[currentProgram->channel].note[0].released;
 
 	}
 	return value;

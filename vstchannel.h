@@ -17,6 +17,14 @@ public:
 		oldProgram = NULL;
 	}
 
+	void AllNotesOff() {
+		for (int i = 0; i < playing_notes; i++) {
+			note[i].released = true;
+			note[i].relSample = note[i].samplesPlayed;
+		}
+	}
+
+
 	void delProgram(VstProgram *program) {
 		active = false;
 

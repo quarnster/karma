@@ -2,6 +2,9 @@
 #define __INCLUDED_KARMA_CHANNEL_H
 
 #include "Program.h"
+#include "note.h"
+
+#define MAX_NOTES 5
 
 class Channel {
 protected:
@@ -12,27 +15,29 @@ protected:
 	float notch;
 
 	bool active;
-	long relSample;
+
+//	long relSample;
 
 	// ----------------------------
-	float fPhase1, fPhase2;
-//	float fScaler;
+//	float fPhase1, fPhase2;
 
-	long samplesPlayed;
+//	long samplesPlayed;
+	int playing_notes;
 
 	long currentVelocity;
-	long currentDelta;
+//	long currentDelta;
 
 	float getSample(float wave, float phase);
 
 public:
-	bool released;
-	long currentNote;
+	karma_Note note[MAX_NOTES];
+//	bool released;
+//	long currentNote;
 
 	Channel();
 	void process(float *out, long sampleFrames);
 	void noteOn(long note, long velocity, long delta);
-	void noteOff();
+	void noteOff(long note);
 };
 
 

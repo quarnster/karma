@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding = "Windows-1252"?>
+<?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="7.00"
-	Name="karma"
+	Version="7.10"
+	Name="karmavst"
 	ProjectGUID="{A115243A-1204-4819-BB2E-EDCE790B89F2}"
 	SccProjectName=""
 	SccLocalPath="">
@@ -66,7 +66,13 @@
 			<Tool
 				Name="VCWebServiceProxyGeneratorTool"/>
 			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
 				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
@@ -123,9 +129,17 @@
 			<Tool
 				Name="VCWebServiceProxyGeneratorTool"/>
 			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
 				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
 		</Configuration>
 	</Configurations>
+	<References>
+	</References>
 	<Files>
 		<Filter
 			Name="Source Files"
@@ -143,7 +157,13 @@
 				RelativePath="Channel.h">
 			</File>
 			<File
+				RelativePath=".\LFO.h">
+			</File>
+			<File
 				RelativePath=".\program.h">
+			</File>
+			<File
+				RelativePath="VstChannel.h">
 			</File>
 			<File
 				RelativePath=".\vstkarma.cpp">
@@ -157,43 +177,64 @@
 			<File
 				RelativePath=".\vstmain.cpp">
 			</File>
+			<File
+				RelativePath="VstProgram.h">
+			</File>
 			<Filter
-				Name="vst"
+				Name="vstsdk"
 				Filter="">
 				<File
-					RelativePath="vst\AEffEditor.hpp">
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\AEffect.h">
 				</File>
 				<File
-					RelativePath=".\vst\AEffect.h">
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\aeffectx.h">
 				</File>
 				<File
-					RelativePath=".\vst\AudioEffect.cpp">
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\AEffEditor.hpp">
 				</File>
 				<File
-					RelativePath="vst\AudioEffect.hpp">
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\aeffguieditor.cpp">
 				</File>
 				<File
-					RelativePath=".\vst\aeffectx.h">
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\aeffguieditor.h">
 				</File>
 				<File
-					RelativePath=".\vst\audioeffectx.cpp">
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\AudioEffect.cpp">
 				</File>
 				<File
-					RelativePath=".\vst\audioeffectx.h">
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\AudioEffect.hpp">
 				</File>
 				<File
-					RelativePath=".\vst\vstcontrols.h">
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\audioeffectx.cpp">
 				</File>
 				<File
-					RelativePath=".\vst\vstgui.h">
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\audioeffectx.h">
+				</File>
+				<File
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\vstcontrols.cpp">
+				</File>
+				<File
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\vstcontrols.h">
+				</File>
+				<File
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\vstfxstore.h">
+				</File>
+				<File
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\vstgui.cpp">
+				</File>
+				<File
+					RelativePath="..\..\vst\vstsdk2.3\vstsdk2.3\source\common\vstgui.h">
 				</File>
 			</Filter>
 		</Filter>
 		<File
-			RelativePath="VstChannel.h">
+			RelativePath=".\karmavst.rc">
 		</File>
 		<File
-			RelativePath="VstProgram.h">
+			RelativePath=".\note.h">
+		</File>
+		<File
+			RelativePath=".\resource.h">
 		</File>
 	</Files>
 	<Globals>

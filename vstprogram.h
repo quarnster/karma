@@ -12,11 +12,11 @@ public:
 	VstProgram() {
 //		name = "bice\0";
 		freq1.sustain = 0.5;
-		volume1.sustain = 0.5;
-		volume1.release = 0.001;
-		volume2.release = 0.001;
-		volume = 0.5;
+		amplifier.sustain = 0.5;
+		amplifier.release = 0.001;
+		gain = 0.5;
 		channel = 1;
+		waveformMix = 0;
 	}
 };
 

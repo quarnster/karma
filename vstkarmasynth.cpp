@@ -74,26 +74,32 @@ long VstKarma::processEvents (VstEvents* ev)
 		VstMidiEvent* event = (VstMidiEvent*)ev->events[i];
 		char* midiData = event->midiData;
 		long cmd = midiData[0] & 0xf0;		// extract command
-		long chn = midiData[0] & 0x0f;	// extract channel
-		if (cmd == 0x90 || cmd == 0x80)		// we only look at notes
-		{
+		long chn = midiData[0] & 0x0f;		// extract channel
+
+		if (cmd == 0x90 || cmd == 0x80)	{	// note on / note off
 			long note = midiData[1] & 0x7f;
 			long velocity = midiData[2] & 0x7f;
 			if (cmd == 0x80)
 				velocity = 0;
-			if (!velocity && (note == channel[chn].currentNote))
-				channel[chn].noteOff();	// note off by velocity 0
+			if (!velocity/* && (note == channel[chn].currentNote)*/)
+				channel[chn].noteOff(note);	// note off by velocity 0
 			else
 				channel[chn].noteOn(note, velocity, event->deltaFrames);
 		} else if (cmd == 0xc0) { // Program change
 			long program = midiData[1] & 0x7f;
-			channel[chn].setProgram(&programs[program]); //setProgram(program);
+			channel[chn].setProgram(&programs[program]);
 		} else if (cmd == 0xb0)	// Channel Mode Messages
 			if (midiData[1] == 120 || midiData[1] >= 123) {
 				// 120 -> All sounds off
 				// 123->127 different all notes off (TODO: implement better)
 				for (int i = 0; i < 16; i++)
-					channel[i].noteOff();
+					channel[i].AllNotesOff();
+
+				if (midiData[1] > 123) {
+					char buf[256];
+					sprintf(buf, "warning: %d, %d\n", cmd, midiData[1]);
+					Debug(buf);
+				}
 			}
 		else {
 			char buf[256];
