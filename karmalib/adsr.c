@@ -1,4 +1,4 @@
-#include "ADSR.h"
+#include "adsr.h"
 
 int karma_ADSR_getValue(karma_ADSR *adsr, long samplePos, long relSample) {
 	int ret;
