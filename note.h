@@ -21,6 +21,11 @@ typedef struct {
 	float band;
 	float notch;
 
+	int volumeUpdateRate;
+	int waveformUpdateRate;
+	int lfo1UpdateRate;
+	int lfo2UpdateRate;
+	int freq2UpdateRate;
 } karma_Note;
 
 #endif
