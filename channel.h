@@ -9,10 +9,6 @@
 class Channel {
 protected:
 	Program *program;
-	float high;
-	float low;
-	float band;
-	float notch;
 
 	bool active;
 
