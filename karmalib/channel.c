@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-#include "Channel.h"
+#include "channel.h"
 // #include "vstkarma.h"
 #include "param.h"
 
@@ -546,7 +546,7 @@ void karma_Channel_processEvent(karma_Channel *channel, karma_MidiEvent *event) 
 }
 
 //-----------------------------------------------------------------------------------------
-static addEvent(karma_Channel *channel, karma_MidiEvent *e) {
+static void addEvent(karma_Channel *channel, karma_MidiEvent *e) {
 
 	if (!channel->event) {
 		// first event in list
@@ -566,7 +566,7 @@ void karma_Channel_addEvent(karma_Channel *channel, karma_MidiEvent *event) {
 		long note = event->data[1] & 0x7f;
 		long velocity = event->data[2] & 0x7f;
 		if (velocity == 0) {
-			event->data[0] = 0x80 | event->data[0]&0xf;
+			event->data[0] = 0x80 | (event->data[0]&0xf);
 			addEvent(channel, event);
 		} else 
 			karma_Channel_noteOn(channel, note, velocity, event->time);
