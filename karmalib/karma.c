@@ -1,8 +1,9 @@
 #include <stdlib.h>
 #include <memory.h>
 
+
 #include "karma.h"
-#include "karmainternal.h"
+#include "channel.h"
 #include "param.h"
 
 static karma_Channel channel[16];
