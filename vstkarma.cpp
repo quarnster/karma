@@ -21,8 +21,10 @@ void VstKarma::Debug(char *str) {
 VstKarma::VstKarma(audioMasterCallback audioMaster) : AudioEffectX (audioMaster, kNumPrograms, kNumParams)
 {
 	setProgram (0);
+	init_sineTable();
 	for (int i = 0; i < 16; i++) {
 		karma_Program_init(&channel[i].program);
+		sprintf(names[i], "Instr. %d", i+1);
 	}
 
 	if (audioMaster)
@@ -69,7 +71,7 @@ void VstKarma::setProgram (long program)
 	setParameter(kLFO2,		(currentProgram->lfo2.waveform/4.0f));
 	setParameter(kLFO2rate,		currentProgram->lfo2.rate);
 	setParameter(kLFO2amount,	currentProgram->lfo2.amount / (1024.0f * 1024.0f));
-	setParameter(kFilterType,	currentProgram->filter);
+	setParameter(kFilterType,	currentProgram->filter / 4.0f);
 	setParameter(kFilterRes,	currentProgram->resonance);
 	setParameter(kFilterCut,	currentProgram->cut);
 	setParameter(kFilterADSRAmount,	currentProgram->adsrAmount);
@@ -96,13 +98,13 @@ long VstKarma::getProgram() {
 //-----------------------------------------------------------------------------------------
 void VstKarma::setProgramName (char *name)
 {
-//	strcpy (currentProgram->name, "bice");
+	strcpy (names[currentProgramIndex], name);
 }
 
 //-----------------------------------------------------------------------------------------
 void VstKarma::getProgramName (char *name)
 {
-	strcpy (name, "bice");
+	strcpy (name, names[currentProgramIndex]);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -300,23 +302,60 @@ void VstKarma::setParameter (long index, float value)
 {
 	switch (index)
 	{
-		case kWaveform1:	currentProgram->waveform1	= (int) (value*4.0f);	break;
+		case kWaveform1:	
+			currentProgram->waveform1	= (int) (value*4.0f);
+			switch (currentProgram->waveform1) {
+				default: case 0: currentProgram->waveform1Function = sineSample; break;
+				case 1: currentProgram->waveform1Function = triSample; break;
+				case 2: currentProgram->waveform1Function = sawSample; break;
+				case 3: currentProgram->waveform1Function = squareSample; break;
+				case 4: currentProgram->waveform1Function = noiseSample; break;
+			}
+			break;
 		case kFreq1:		currentProgram->freq1		= (value*2)-1;	break;
 		case kFreq2:		currentProgram->freq2		= (value*2)-1;	break;
-		case kWaveform2:	currentProgram->waveform2	= (int) (value*4.0f);	break;
+		case kWaveform2:
+			currentProgram->waveform2	= (int) (value*4.0f);
+			switch (currentProgram->waveform2) {
+				default: case 0: currentProgram->waveform2Function = sineSample; break;
+				case 1: currentProgram->waveform2Function = triSample; break;
+				case 2: currentProgram->waveform2Function = sawSample; break;
+				case 3: currentProgram->waveform2Function = squareSample; break;
+				case 4: currentProgram->waveform2Function = noiseSample; break;
+			}
+
+			break;
 		case kWaveLen1:		currentProgram->wavelen1	= value*4096;	break;
 		case kWaveLen2:		currentProgram->wavelen2	= value*4096;	break;
 		case kModEnvA:		currentProgram->modEnv.attack	= (int)(value*44100*2);	break;
 		case kModEnvD:		currentProgram->modEnv.decay	= (int)(value*44100*2);	break;
 		case kModEnvAmount:	currentProgram->modEnvAmount	= (value*2)-1;	break;
 		case kWaveformMix:	currentProgram->waveformMix	= (int) (value * 1024);	break;
-		case kLFO1:		currentProgram->lfo1.waveform	= (int) (value*4.0f);	break;
+		case kLFO1:
+			currentProgram->lfo1.waveform	= (int) (value*4.0f);
+			switch (currentProgram->lfo1.waveform) {
+				default: case 0: currentProgram->lfo1.waveformFunction = sineSample; break;
+				case 1: currentProgram->lfo1.waveformFunction = triSample; break;
+				case 2: currentProgram->lfo1.waveformFunction = sawSample; break;
+				case 3: currentProgram->lfo1.waveformFunction = squareSample; break;
+				case 4: currentProgram->lfo1.waveformFunction = noiseSample; break;
+			}
+			break;
 		case kLFO1amount:	currentProgram->lfo1.amount	= (int) (value * (1024.0f * 80.0f));	break;
 		case kLFO1rate:		currentProgram->lfo1.rate	= value;	break;
-		case kLFO2:		currentProgram->lfo2.waveform	= (int) (value*4.0f);	break;
+		case kLFO2:
+			currentProgram->lfo2.waveform	= (int) (value*4.0f);
+			switch (currentProgram->lfo2.waveform) {
+				default: case 0: currentProgram->lfo2.waveformFunction = sineSample; break;
+				case 1: currentProgram->lfo2.waveformFunction = triSample; break;
+				case 2: currentProgram->lfo2.waveformFunction = sawSample; break;
+				case 3: currentProgram->lfo2.waveformFunction = squareSample; break;
+				case 4: currentProgram->lfo2.waveformFunction = noiseSample; break;
+			}
+			break;
 		case kLFO2amount:	currentProgram->lfo2.amount	= (int) (value * (1024.0f * 1024.0f));	break;
 		case kLFO2rate:		currentProgram->lfo2.rate	= value;	break;
-		case kFilterType:	currentProgram->filter		= value;	break;
+		case kFilterType:	currentProgram->filter		= value*4;	break;
 		case kFilterRes:	currentProgram->resonance	= value;	break;
 		case kFilterCut:	currentProgram->cut		= value;	break;
 		case kFilterADSRAmount:	currentProgram->adsrAmount	= value;	break;
@@ -366,7 +405,7 @@ float VstKarma::getParameter (long index)
 		case kLFO2:		value = (currentProgram->lfo2.waveform / 4.0f);		break;
 		case kLFO2amount:	value = currentProgram->lfo2.amount / (1024.0f * 1024.0f);		break;
 		case kLFO2rate:		value = currentProgram->lfo2.rate;		break;
-		case kFilterType:	value = currentProgram->filter;			break;
+		case kFilterType:	value = currentProgram->filter / 4.0f;			break;
 		case kFilterRes:	value = currentProgram->resonance;		break;
 		case kFilterCut:	value = currentProgram->cut;			break;
 		case kFilterADSRAmount:	value = currentProgram->adsrAmount;		break;
@@ -409,7 +448,7 @@ bool VstKarma::getProgramNameIndexed (long category, long index, char* text)
 {
 	if (index < kNumPrograms)
 	{
-//		strcpy (text, programs[index].name);
+		strcpy (text, names[index]);
 		return true;
 	}
 	return false;
@@ -421,6 +460,7 @@ bool VstKarma::copyProgram (long destination)
 	if (destination < kNumPrograms)
 	{
 		memcpy(&channel[destination].program, &channel[curProgram].program, sizeof(karma_Program));
+		memcpy(&names[destination], &names[curProgram], 30);
 //		channel.programs[destination] = programs[curProgram];
 		return true;
 	}
