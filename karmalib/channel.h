@@ -14,7 +14,7 @@ extern "C" {
 
 #define MAX_NOTES 15
 
-typedef __declspec(align(32)) struct {
+typedef struct {
 	char active;
 	int playing_notes;
 
@@ -50,3 +50,4 @@ void karma_Channel_allNotesOff(karma_Channel *channel);
 
 
 #endif
+

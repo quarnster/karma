@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-typedef __declspec(align(32)) struct {
+typedef struct {
 	int phase1;
 	int phase2;
 
