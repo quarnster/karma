@@ -9,12 +9,12 @@
 #endif
 
 
+
 int channelBufferL[BUFFERSIZE];
 int channelBufferR[BUFFERSIZE];
 
 //-----------------------------------------------------------------------------------------
 Channel::Channel() {
-	volume = 1024;
 	panl = panr = sqrt(0.5) * 1024;
 	program = NULL;
 	playing_notes = 0;
@@ -39,14 +39,14 @@ Channel::~Channel() {
 
 #define LIMIT 32767
 //-----------------------------------------------------------------------------------------
-inline int getSample(float wave, int phase, int wavelen) {
+__inline int getSample(int wave, int phase, int wavelen) {
 	int sample = (int) (phase >> 20);
-	int pl = sample + 2048;
+	int pl = sample;
+	pl += 2048;
 
-	if (wave < 0.2) {				// sin
+	if (wave == 0) { // sin
 		return sinf(sample / 2048.0f * 3.1415927f) * LIMIT;
-	}
-	else if (wave < 0.4) {				// tri
+	} else if (wave == 1) { // tri
 		if (pl > 3072) {
 			sample = (pl - 4096) * LIMIT;
 		} else if (pl < 1024) {
@@ -56,29 +56,35 @@ inline int getSample(float wave, int phase, int wavelen) {
 		}
 
 		return sample >> 10;
-	}
-	else if (wave < 0.6)				// saw
-		return sample << 4;
-	else if (wave < 0.8)				// square
+	} else if (wave == 2) { // saw
+		sample <<= 4;
+		return sample;
+	} else if (wave == 3) { // square
 		return pl > wavelen ? LIMIT : -LIMIT;
-	else						// noise
+	} else {
 		return ((2 * ((rand() % 1024) - 512)) * LIMIT) >> 10;
+	}
 }
 
 //-----------------------------------------------------------------------------------------
 void Channel::process(int *left, int *right, long frames) {
 
-	memset(&channelBufferL, 0, BUFFERSIZE * sizeof(int));
-	memset(&channelBufferR, 0, BUFFERSIZE * sizeof(int));
+	if (active || echoSamples > 0) {
+		memset(&channelBufferL, 0, BUFFERSIZE * sizeof(int));
+		memset(&channelBufferR, 0, BUFFERSIZE * sizeof(int));
+	} else return;
 
+	int *lBuf;
+	int *rBuf;
 	if (active) {
 		if (program->echoDelay > 1024 && program->echoAmount > 256)
 			echoSamples = program->echoDelay;
 
 		for (int i = 0; i < playing_notes; i++) {
-			unsigned int pos = 0;
-			long sampleFrames = frames;
-			int noteFreq = (0xffffffff/44100) * (440.0f * powf(2.0, (note[i].currentNote - 69) / 12.0));
+			lBuf = channelBufferL;
+			rBuf = channelBufferR;
+
+			int sampleFrames = frames;
 			int lfo1phase = program->lfo1.phase;
 			int lfo2phase = program->lfo2.phase;
 			int lfo1 = (getSample(program->lfo1.waveform, lfo1phase, 2048) * program->lfo1.amount) >> 10;
@@ -86,9 +92,9 @@ void Channel::process(int *left, int *right, long frames) {
 
 			int lfo1rate = (0xffffffff/44100) * (program->lfo1.rate * 20);
 			int lfo2rate = (0xffffffff/44100) * (program->lfo2.rate * 20);
-			int freq1base = noteFreq * (1 + program->freq1);
+			int freq1base = note[i].noteFreq * (1 + program->freq1);
 			int freq1 = freq1base + lfo1;
-			int freq2 = noteFreq * ((1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample) / 1024.0f)) + lfo1;
+			int freq2 = note[i].noteFreq * ((1 + program->freq2 + program->modEnvAmount * karma_ADSR_getValue(&program->modEnv, note[i].samplesPlayed, note[i].relSample) / 1024.0f)) + lfo1;
 
 			if (note[i].delta > 0)
 			{
@@ -96,40 +102,58 @@ void Channel::process(int *left, int *right, long frames) {
 				
 				sampleFrames -= sub;
 				note[i].delta -= sub;
-				pos += sub;
+				lBuf += sub;
+				rBuf += sub;
 			}
-			long numFrames = sampleFrames;
 
-			float cut = (program->cut + program->adsrAmount * program->filterCut.getValue(note[i].samplesPlayed, note[i].relSample)/1024.0f)*8192 + lfo2 / 1024.0f;
+			float cut = (program->cut + program->adsrAmount * karma_ADSR_getValue(&program->filterCut, note[i].samplesPlayed, note[i].relSample)/1024.0f)*8192 + lfo2 / 1024.0f;
 			float res = program->resonance;
 			float f = (float) (2 * sin(3.1415927f * cut / 44100));
 			float q = res;
 			float scale = res;
 			int dist = 1024 + (program->distortion*20);
+			int vol = 0;
+			short realSample = 0;
+			int sample;
 
 			// loop
 			while (--sampleFrames >= 0)
 			{
-				int sample;
-				if (program->waveformMix > 1000)
-					sample = getSample(program->waveform2, note[i].phase2, program->wavelen2);
-				else if (program->waveformMix < 50)
+
+				if (program->waveformMix < 50)
 					sample = getSample(program->waveform1, note[i].phase1, program->wavelen1);
-				else
-					sample = ((getSample(program->waveform1, note[i].phase1, program->wavelen1) * (1024 - program->waveformMix)) >> 10) + ((getSample(program->waveform2, note[i].phase2, program->wavelen2) * program->waveformMix) >> 10);
+				else if (program->waveformMix > 1000)
+					sample = getSample(program->waveform2, note[i].phase2, program->wavelen2);
+				else {
+					int tmp = 1024;
+					tmp -= program->waveformMix;
+					sample = getSample(program->waveform1, note[i].phase1, program->wavelen1);
+					sample *= tmp;
+					sample >>= 10;
+					
+					tmp = getSample(program->waveform2, note[i].phase2, program->wavelen2);
+					tmp *= program->waveformMix;
+					tmp >>= 10;
+					sample += tmp;
+				}
 
 				if (freq1 < 0) freq1 = 0;
 				if (freq2 < 0) freq2 = 0;
+
 
 				if (program->filter >= 0.2) {
 					float fsample = (float) (sample / 32767.0f);
 //					if (cut < 0) cut = 0;
 //					if (cut > 8192) cut = 8192;
 
-					note[i].low = note[i].low + f * note[i].band;
+					// note[i].low = note[i].low + f * note[i].band;
+					note[i].low += f * note[i].band;
 					note[i].high = scale * fsample - note[i].low - q * note[i].band;
-					note[i].band = f * note[i].high + note[i].band;
-					note[i].notch = note[i].high + note[i].low;
+					// note[i].band = f * note[i].high + note[i].band;
+					note[i].band += f * note[i].high;
+
+					note[i].notch = note[i].high;
+					note[i].notch += note[i].low;
 
 					if (program->filter < 0.4)
 						fsample = note[i].low;
@@ -139,29 +163,43 @@ void Channel::process(int *left, int *right, long frames) {
 						fsample = note[i].band;
 					else
 						fsample = note[i].notch;
-					cut = (program->cut + program->adsrAmount * program->filterCut.getValue(note[i].samplesPlayed, note[i].relSample)/1024.0f)*8192 + lfo2 / 1024.0f;
+
+					if (program->adsrAmount > 50)
+						cut = (program->cut + program->adsrAmount * karma_ADSR_getValue(&program->filterCut, note[i].samplesPlayed, note[i].relSample)/1024.0f)*8192 + lfo2 / 1024.0f;
 
 					f = (float) (2 * sinf(3.141592f * cut / 44100));
-					q = res;
-					scale = res;
-					sample = fsample * 32767.0f;
+//					q = res;
+//					scale = res;
+
+					fsample *= 32767;
+					sample = (int) fsample;
 				}
 
+
 				if (dist > 1024) {
-					sample = (sample * dist) >> 10;
+					sample *= dist;
+					sample >>= 10;
 					sample = sample > 32767 ? 32767 : sample < -32767 ? -32767 : sample;
 				}
 
-				int vol = (((program->amplifier.getValue(note[i].samplesPlayed, note[i].relSample) * program->gain) >> 10) * volume) >> 10;
-				short realSample = (short) (((sample * vol) >> 10)&0xffff);
+				vol = karma_ADSR_getValue(&program->amplifier, note[i].samplesPlayed, note[i].relSample);
+				vol *= program->gain;
+				vol >>= 10;
 
-				channelBufferL[pos] += (realSample * panl) >> 10;
-				channelBufferR[pos] += (realSample * panr) >> 10;
-				pos++;
+				sample *= vol;
+				sample >>= 10;
+				sample &= 0xffff;
+				realSample = (short) (sample);
 
-				// left = sample*sqrt(1.0-panning);
-				// right= sample*sqrt(panning);
+				sample = realSample;
+				sample *= panl;
+				sample >>= 10;
+				*lBuf++ += sample;
 
+				sample = realSample;
+				sample *= panr;
+				sample >>= 10;
+				*rBuf++ += sample;
 
 				note[i].phase1 += freq1;
 				note[i].phase2 += freq2;
@@ -179,10 +217,10 @@ void Channel::process(int *left, int *right, long frames) {
 				}
 
 				if (program->waveformMix > 50)
-					freq2 = noteFreq * (1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample) / 1024.0f) + lfo1;
+					freq2 = note[i].noteFreq * (1 + program->freq2 + program->modEnvAmount * karma_ADSR_getValue(&program->modEnv, note[i].samplesPlayed, note[i].relSample) / 1024.0f) + lfo1;
 
 
-				if (note[i].released && vol <= 16) {
+				if (note[i].released && vol <= 0) {
 					// this notes volume is too low to hear and the note has been released
 					// so remove it from the playing notes
 					note[i].active = false;
@@ -209,9 +247,13 @@ void Channel::process(int *left, int *right, long frames) {
 		program->lfo2.phase += frames * (0xffffffff/44100) * program->lfo2.rate*20;
 	}
 
+	lBuf = channelBufferL;
+	rBuf = channelBufferR;
+
 	if (echoSamples > 0) {
-		echoSamples--;
+		--echoSamples;
 		if (leftEcho && rightEcho) {
+			int tmp;
 			for (int i = 0; i < frames; i++) {
 				if (echoPos >= MAX_ECHO * 2)
 					echoPos = 0;
@@ -220,15 +262,26 @@ void Channel::process(int *left, int *right, long frames) {
 				if( j < 0 )
 					j += MAX_ECHO * 2;
 
-				left[i] += leftEcho[ echoPos ] = channelBufferL[i] + ((leftEcho[j] * program->echoAmount) >> 10);
-				right[i] += rightEcho[ echoPos ] = channelBufferR[i] + ((rightEcho[j] * program->echoAmount) >> 10);
-				echoPos++;
+				leftEcho[ echoPos ] = *lBuf++;
+				tmp = leftEcho[j];
+				tmp *= program->echoAmount;
+				tmp >>= 10;
+				leftEcho[ echoPos ] += tmp;
+				*left++ += leftEcho[ echoPos ];
+
+				rightEcho[ echoPos ] = *rBuf++;
+				tmp = rightEcho[j];
+				tmp *= program->echoAmount;
+				tmp >>= 10;
+				rightEcho[ echoPos ] += tmp;
+				*right++ += rightEcho[ echoPos ];
+				++echoPos;
 			}
 		}
-	} else if (active) {
+	} else {
 		for (int i = 0; i < frames; i++) {
-			left[i] += channelBufferL[i];
-			right[i] += channelBufferR[i];
+			*left++ += *lBuf++;
+			*right++ += *rBuf++;
 		}
 	}
 }
@@ -286,6 +339,7 @@ void Channel::noteOn(long notenum, long velocity, long delta)
 	note[idx].released = false;
 	note[idx].active = true;
 	note[idx].currentNote = notenum;
+	note[idx].noteFreq = (0xffffffff/44100) * (440.0f * powf(2.0, (note[idx].currentNote - 69) / 12.0));
 	note[idx].samplesPlayed = 0;
 	note[idx].relSample = 0;
 	note[idx].delta = delta;
@@ -324,18 +378,18 @@ void Channel::setParameter(int index, int param) {
 
 	float value = param / 127.0f;
 	switch (index) {
-		case kWaveform1:	program->waveform1		= value;		break;
+		case kWaveform1:	program->waveform1		= value*4;		break;
 		case kFreq1:		program->freq1			= (value*2)-1;		break;
 		case kFreq2:		program->freq2			= (value*2)-1;		break;
-		case kWaveform2:	program->waveform2		= value;		break;
+		case kWaveform2:	program->waveform2		= value*4;		break;
 		case kModEnvA:		program->modEnv.attack		= (int)(value*44100*2);	break;
 		case kModEnvD:		program->modEnv.decay		= (int)(value*44100*2);	break;
 		case kModEnvAmount:	program->modEnvAmount		= (value*2)-1;		break;
 		case kWaveformMix:	program->waveformMix		= (int) (value * 1024);	break;
-		case kLFO1:		program->lfo1.waveform		= value;		break;
+		case kLFO1:		program->lfo1.waveform		= value*4;		break;
 		case kLFO1amount:	program->lfo1.amount		= (int) (value * (1024.0f * 80.0f));	break;
 		case kLFO1rate:		program->lfo1.rate		= value;		break;
-		case kLFO2:		program->lfo2.waveform		= value;		break;
+		case kLFO2:		program->lfo2.waveform		= value*4;		break;
 		case kLFO2amount:	program->lfo2.amount		= (int) (value * (1024.0f * 1024.0f));	break;
 		case kLFO2rate:		program->lfo2.rate		= value;		break;
 		case kFilterType:	program->filter			= value;		break;
