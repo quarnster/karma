@@ -19,6 +19,7 @@ public:
 		waveform1 = 0.476;
 		waveform2 = 0.476;
 		waveformMix = 0;
+		wavelen1 = wavelen2 =  0.5 * 4096;
 	}
 };
 
