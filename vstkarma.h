@@ -7,6 +7,7 @@
 #include "Program.h"
 #include "Channel.h"
 #include "param.h"
+#include "waveform.h"
 
 enum
 {
@@ -58,6 +59,7 @@ public:
 private:
 	void initProcess();
 
+	char names[16][30];
 	Channel channel[16];
 //	Program* programs;
 	karma_Program* currentProgram;
