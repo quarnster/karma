@@ -4,13 +4,16 @@
 #include "ADSR.h"
 #include "LFO.h"
 
-//typedef ((int) 
-typedef struct {
+//typedef ((int)
+#ifdef __GNUC__
+#define __declspec(x) __attribute__((x))
+#endif
+typedef __declspec(align(32)) struct {
 	int waveform1;
 	int waveform2;
 
-	WAVEFORM_CALLBACK waveform1Function;
-	WAVEFORM_CALLBACK waveform2Function;
+	int *waveform1Table;
+	int *waveform2Table;
 
 	int wavelen1;
 	int wavelen2;

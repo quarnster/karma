@@ -21,7 +21,7 @@ void VstKarma::Debug(char *str) {
 VstKarma::VstKarma(audioMasterCallback audioMaster) : AudioEffectX (audioMaster, kNumPrograms, kNumParams)
 {
 	setProgram (0);
-	init_sineTable();
+	karma_Waveform_initTables();
 	for (int i = 0; i < 16; i++) {
 		karma_Program_init(&channel[i].program);
 		sprintf(names[i], "Instr. %d", i+1);
@@ -57,10 +57,10 @@ void VstKarma::setProgram (long program)
 
 	setParameter(kWaveform1,	(currentProgram->waveform1 / 4.0f));
 	setParameter(kFreq1,		(currentProgram->freq1/2.0)+0.5f);
-	setParameter(kWaveLen1,		(currentProgram->wavelen1 / 4096.0f));
+	setParameter(kWaveLen1,		(currentProgram->wavelen1 / (float) (WAVETABLESIZE)));
 	setParameter(kWaveform2,	(currentProgram->waveform2 / 4.0f));
 	setParameter(kFreq2,		(currentProgram->freq2/2.0)+0.5f);
-	setParameter(kWaveLen2,		(currentProgram->wavelen2 / 4096.0f));
+	setParameter(kWaveLen2,		(currentProgram->wavelen2 / (float) (WAVETABLESIZE)));
 	setParameter(kWaveformMix,	(currentProgram->waveformMix / 1024.0f));
 	setParameter(kModEnvA,		(currentProgram->modEnv.attack / (44100 * 2.0f)));
 	setParameter(kModEnvD,		(currentProgram->modEnv.decay / (44100 * 2.0f)));
@@ -305,11 +305,11 @@ void VstKarma::setParameter (long index, float value)
 		case kWaveform1:	
 			currentProgram->waveform1	= (int) (value*4.0f);
 			switch (currentProgram->waveform1) {
-				default: case 0: currentProgram->waveform1Function = sineSample; break;
-				case 1: currentProgram->waveform1Function = triSample; break;
-				case 2: currentProgram->waveform1Function = sawSample; break;
-				case 3: currentProgram->waveform1Function = squareSample; break;
-				case 4: currentProgram->waveform1Function = noiseSample; break;
+				default: case 0: currentProgram->waveform1Table = sineTable; break;
+				case 1: currentProgram->waveform1Table = triTable; break;
+				case 2: currentProgram->waveform1Table = sawTable; break;
+				case 3: currentProgram->waveform1Table = squareTable; break;
+				case 4: currentProgram->waveform1Table = noiseTable; break;
 			}
 			break;
 		case kFreq1:		currentProgram->freq1		= (value*2)-1;	break;
@@ -317,16 +317,16 @@ void VstKarma::setParameter (long index, float value)
 		case kWaveform2:
 			currentProgram->waveform2	= (int) (value*4.0f);
 			switch (currentProgram->waveform2) {
-				default: case 0: currentProgram->waveform2Function = sineSample; break;
-				case 1: currentProgram->waveform2Function = triSample; break;
-				case 2: currentProgram->waveform2Function = sawSample; break;
-				case 3: currentProgram->waveform2Function = squareSample; break;
-				case 4: currentProgram->waveform2Function = noiseSample; break;
+				default: case 0: currentProgram->waveform2Table = sineTable; break;
+				case 1: currentProgram->waveform2Table = triTable; break;
+				case 2: currentProgram->waveform2Table = sawTable; break;
+				case 3: currentProgram->waveform2Table = squareTable; break;
+				case 4: currentProgram->waveform2Table = noiseTable; break;
 			}
 
 			break;
-		case kWaveLen1:		currentProgram->wavelen1	= value*4096;	break;
-		case kWaveLen2:		currentProgram->wavelen2	= value*4096;	break;
+		case kWaveLen1:		currentProgram->wavelen1	= value*WAVETABLESIZE;	break;
+		case kWaveLen2:		currentProgram->wavelen2	= value*WAVETABLESIZE;	break;
 		case kModEnvA:		currentProgram->modEnv.attack	= (int)(value*44100*2);	break;
 		case kModEnvD:		currentProgram->modEnv.decay	= (int)(value*44100*2);	break;
 		case kModEnvAmount:	currentProgram->modEnvAmount	= (value*2)-1;	break;
@@ -334,11 +334,11 @@ void VstKarma::setParameter (long index, float value)
 		case kLFO1:
 			currentProgram->lfo1.waveform	= (int) (value*4.0f);
 			switch (currentProgram->lfo1.waveform) {
-				default: case 0: currentProgram->lfo1.waveformFunction = sineSample; break;
-				case 1: currentProgram->lfo1.waveformFunction = triSample; break;
-				case 2: currentProgram->lfo1.waveformFunction = sawSample; break;
-				case 3: currentProgram->lfo1.waveformFunction = squareSample; break;
-				case 4: currentProgram->lfo1.waveformFunction = noiseSample; break;
+				default: case 0: currentProgram->lfo1.waveformTable = sineTable; break;
+				case 1: currentProgram->lfo1.waveformTable = triTable; break;
+				case 2: currentProgram->lfo1.waveformTable = sawTable; break;
+				case 3: currentProgram->lfo1.waveformTable = squareTable; break;
+				case 4: currentProgram->lfo1.waveformTable = noiseTable; break;
 			}
 			break;
 		case kLFO1amount:	currentProgram->lfo1.amount	= (int) (value * (1024.0f * 80.0f));	break;
@@ -346,11 +346,11 @@ void VstKarma::setParameter (long index, float value)
 		case kLFO2:
 			currentProgram->lfo2.waveform	= (int) (value*4.0f);
 			switch (currentProgram->lfo2.waveform) {
-				default: case 0: currentProgram->lfo2.waveformFunction = sineSample; break;
-				case 1: currentProgram->lfo2.waveformFunction = triSample; break;
-				case 2: currentProgram->lfo2.waveformFunction = sawSample; break;
-				case 3: currentProgram->lfo2.waveformFunction = squareSample; break;
-				case 4: currentProgram->lfo2.waveformFunction = noiseSample; break;
+				default: case 0: currentProgram->lfo2.waveformTable = sineTable; break;
+				case 1: currentProgram->lfo2.waveformTable = triTable; break;
+				case 2: currentProgram->lfo2.waveformTable = sawTable; break;
+				case 3: currentProgram->lfo2.waveformTable = squareTable; break;
+				case 4: currentProgram->lfo2.waveformTable = noiseTable; break;
 			}
 			break;
 		case kLFO2amount:	currentProgram->lfo2.amount	= (int) (value * (1024.0f * 1024.0f));	break;
@@ -392,8 +392,8 @@ float VstKarma::getParameter (long index)
 		case kWaveform1:	value = (currentProgram->waveform1 / 4.0f);		break;
 		case kFreq1:		value = (currentProgram->freq1/2.0)+0.5f;	break;
 		case kFreq2:		value = (currentProgram->freq2/2.0)+0.5f;	break;
-		case kWaveLen1:		value = currentProgram->wavelen1 / 4096.0f;	break;
-		case kWaveLen2:		value = currentProgram->wavelen2 / 4096.0f;	break;
+		case kWaveLen1:		value = currentProgram->wavelen1 / (float) WAVETABLESIZE;	break;
+		case kWaveLen2:		value = currentProgram->wavelen2 / (float) WAVETABLESIZE;	break;
 		case kWaveform2:	value = (currentProgram->waveform2 / 4.0f);		break;
 		case kModEnvA:		value = (currentProgram->modEnv.attack / (44100*2.0f));		break;
 		case kModEnvD:		value = (currentProgram->modEnv.decay / (44100*2.0f));		break;

@@ -11,8 +11,14 @@
 
 
 
-int channelBufferL[BUFFERSIZE];
-int channelBufferR[BUFFERSIZE];
+#ifdef __GNUC__
+static int channelBufferL[BUFFERSIZE] __attribute__((aligned(32)));
+static int channelBufferR[BUFFERSIZE] __attribute__((aligned(32)));
+#else
+static __declspec(align(32)) int channelBufferL[BUFFERSIZE];
+static __declspec(align(32)) int channelBufferR[BUFFERSIZE];
+#endif
+
 
 //-----------------------------------------------------------------------------------------
 Channel::Channel() {
@@ -177,8 +183,8 @@ void Channel::process(int *left, int *right, long frames) {
 			int sampleFrames = frames;
 			int lfo1phase = program.lfo1.phase;
 			int lfo2phase = program.lfo2.phase;
-			int lfo1 = (program.lfo1.waveformFunction(lfo1phase, 2048) * program.lfo1.amount) >> 10;
-			int lfo2 = (program.lfo2.waveformFunction(lfo2phase, 2048) * program.lfo2.amount) >> 10;
+			int lfo1 = (program.lfo1.waveformTable[PHASE2TABLE(program.lfo1.waveform, lfo1phase, WAVETABLESIZE/2)] * program.lfo1.amount) >> 10;
+			int lfo2 = (program.lfo2.waveformTable[PHASE2TABLE(program.lfo2.waveform, lfo2phase, WAVETABLESIZE/2)] * program.lfo2.amount) >> 10;
 
 			int lfo1rate = (0xffffffff/44100) * (program.lfo1.rate * 20);
 			int lfo2rate = (0xffffffff/44100) * (program.lfo2.rate * 20);
@@ -204,7 +210,7 @@ void Channel::process(int *left, int *right, long frames) {
 			float scale = res;
 			int dist = 1024 + (program.distortion*20);
 			short realSample = 0;
-			int sample = ((1024 - program.waveformMix) * program.waveform1Function(note[i].phase1, program.wavelen1) >> 10) + ((program.waveform2Function(note[i].phase2, program.wavelen2) * program.waveformMix) >> 10);
+			int sample = ((1024 - program.waveformMix) * program.waveform1Table[PHASE2TABLE(program.waveform1, note[i].phase1, program.wavelen1)] >> 10) + ((program.waveform2Table[PHASE2TABLE(program.waveform2, note[i].phase2, program.wavelen2)] * program.waveformMix) >> 10);
 
 			int vol = karma_ADSR_getValue(&program.amplifier, note[i].samplesPlayed, note[i].relSample);
 			vol *= program.gain;
@@ -215,17 +221,17 @@ void Channel::process(int *left, int *right, long frames) {
 			{
 				if ((note[i].samplesPlayed & note[i].waveformUpdateRate) == note[i].waveformUpdateRate) {
 					if (program.waveformMix < 50)
-						sample = program.waveform1Function(note[i].phase1, program.wavelen1);
+						sample = program.waveform1Table[PHASE2TABLE(program.waveform1, note[i].phase1, program.wavelen1)];
 					else if (program.waveformMix > 1000)
-						sample = program.waveform2Function(note[i].phase2, program.wavelen2);
+						sample = program.waveform2Table[PHASE2TABLE(program.waveform2, note[i].phase2, program.wavelen2)];
 					else {
 						int tmp = 1024;
 						tmp -= program.waveformMix;
-						sample = program.waveform1Function(note[i].phase1, program.wavelen1);
+						sample = program.waveform1Table[PHASE2TABLE(program.waveform1, note[i].phase1, program.wavelen1)];
 						sample *= tmp;
 						sample >>= 10;
 						
-						tmp = program.waveform2Function(note[i].phase2, program.wavelen2);
+						tmp = program.waveform2Table[PHASE2TABLE(program.waveform2, note[i].phase2, program.wavelen2)];
 						tmp *= program.waveformMix;
 						tmp >>= 10;
 						sample += tmp;
@@ -286,6 +292,7 @@ void Channel::process(int *left, int *right, long frames) {
 				if ((note[i].samplesPlayed & note[i].volumeUpdateRate) == note[i].volumeUpdateRate) {
 					vol = karma_ADSR_getValue(&program.amplifier, note[i].samplesPlayed, note[i].relSample);
 					if (!note[i].released && vol == program.amplifier.sustain && note[i].samplesPlayed > program.amplifier.attack + program.amplifier.decay) {
+						// the volume adsr envelope is sustained and will not update anymore
 						note[i].volumeUpdateRate = MIN_UPDATE_RATE - 1;
 					}
 					vol *= program.gain;
@@ -294,12 +301,12 @@ void Channel::process(int *left, int *right, long frames) {
 				}
 
 				if ((note[i].samplesPlayed & note[i].lfo1UpdateRate) == note[i].lfo1UpdateRate) {
-					lfo1 = (program.lfo1.waveformFunction(lfo1phase, 2048) * program.lfo1.amount) >> 10;
+					lfo1 = (program.lfo1.waveformTable[PHASE2TABLE(program.lfo1.waveform, lfo1phase, WAVETABLESIZE/2)] * program.lfo1.amount) >> 10;
 					freq1 = freq1base + lfo1;
 					freq2 = freq2base + lfo1;
 				}
 				if ((note[i].samplesPlayed & note[i].lfo2UpdateRate) == note[i].lfo2UpdateRate) {
-					lfo2 = (program.lfo2.waveformFunction(lfo2phase, 2048) * program.lfo2.amount) >> 10;
+					lfo2 = (program.lfo2.waveformTable[PHASE2TABLE(program.lfo2.waveform, lfo2phase, WAVETABLESIZE/2)] * program.lfo1.amount) >> 10;
 				}
 
 
@@ -467,11 +474,11 @@ void Channel::setParameter(int index, int param) {
 		case kWaveform1:	
 			program.waveform1	= (int) (value*4.0f);
 			switch (program.waveform1) {
-				default: case 0: program.waveform1Function = sineSample; break;
-				case 1: program.waveform1Function = triSample; break;
-				case 2: program.waveform1Function = sawSample; break;
-				case 3: program.waveform1Function = squareSample; break;
-				case 4: program.waveform1Function = noiseSample; break;
+				default: case 0: program.waveform1Table = sineTable; break;
+				case 1: program.waveform1Table = triTable; break;
+				case 2: program.waveform1Table = sawTable; break;
+				case 3: program.waveform1Table = squareTable; break;
+				case 4: program.waveform1Table = noiseTable; break;
 			}
 			break;
 		case kFreq1:		program.freq1		= (value*2)-1;	break;
@@ -479,16 +486,16 @@ void Channel::setParameter(int index, int param) {
 		case kWaveform2:
 			program.waveform2	= (int) (value*4.0f);
 			switch (program.waveform2) {
-				default: case 0: program.waveform2Function = sineSample; break;
-				case 1: program.waveform2Function = triSample; break;
-				case 2: program.waveform2Function = sawSample; break;
-				case 3: program.waveform2Function = squareSample; break;
-				case 4: program.waveform2Function = noiseSample; break;
+				default: case 0: program.waveform2Table = sineTable; break;
+				case 1: program.waveform2Table = triTable; break;
+				case 2: program.waveform2Table = sawTable; break;
+				case 3: program.waveform2Table = squareTable; break;
+				case 4: program.waveform2Table = noiseTable; break;
 			}
 
 			break;
-		case kWaveLen1:		program.wavelen1	= value*4096;	break;
-		case kWaveLen2:		program.wavelen2	= value*4096;	break;
+		case kWaveLen1:		program.wavelen1	= value*WAVETABLESIZE;	break;
+		case kWaveLen2:		program.wavelen2	= value*WAVETABLESIZE;	break;
 		case kModEnvA:		program.modEnv.attack	= (int)(value*44100*2);	break;
 		case kModEnvD:		program.modEnv.decay	= (int)(value*44100*2);	break;
 		case kModEnvAmount:	program.modEnvAmount	= (value*2)-1;	break;
@@ -496,11 +503,11 @@ void Channel::setParameter(int index, int param) {
 		case kLFO1:
 			program.lfo1.waveform	= (int) (value*4.0f);
 			switch (program.lfo1.waveform) {
-				default: case 0: program.lfo1.waveformFunction = sineSample; break;
-				case 1: program.lfo1.waveformFunction = triSample; break;
-				case 2: program.lfo1.waveformFunction = sawSample; break;
-				case 3: program.lfo1.waveformFunction = squareSample; break;
-				case 4: program.lfo1.waveformFunction = noiseSample; break;
+				default: case 0: program.lfo1.waveformTable = sineTable; break;
+				case 1: program.lfo1.waveformTable = triTable; break;
+				case 2: program.lfo1.waveformTable = sawTable; break;
+				case 3: program.lfo1.waveformTable = squareTable; break;
+				case 4: program.lfo1.waveformTable = noiseTable; break;
 			}
 			break;
 		case kLFO1amount:	program.lfo1.amount	= (int) (value * (1024.0f * 80.0f));	break;
@@ -508,11 +515,11 @@ void Channel::setParameter(int index, int param) {
 		case kLFO2:
 			program.lfo2.waveform	= (int) (value*4.0f);
 			switch (program.lfo2.waveform) {
-				default: case 0: program.lfo2.waveformFunction = sineSample; break;
-				case 1: program.lfo2.waveformFunction = triSample; break;
-				case 2: program.lfo2.waveformFunction = sawSample; break;
-				case 3: program.lfo2.waveformFunction = squareSample; break;
-				case 4: program.lfo2.waveformFunction = noiseSample; break;
+				default: case 0: program.lfo2.waveformTable = sineTable; break;
+				case 1: program.lfo2.waveformTable = triTable; break;
+				case 2: program.lfo2.waveformTable = sawTable; break;
+				case 3: program.lfo2.waveformTable = squareTable; break;
+				case 4: program.lfo2.waveformTable = noiseTable; break;
 			}
 			break;
 		case kLFO2amount:	program.lfo2.amount	= (int) (value * (1024.0f * 1024.0f));	break;

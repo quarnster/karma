@@ -5,7 +5,7 @@
 
 typedef struct {
 	int waveform;
-	WAVEFORM_CALLBACK waveformFunction;
+	int* waveformTable;
 
 	float rate;
 	int amount;

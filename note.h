@@ -1,7 +1,11 @@
 #ifndef __INCLUDED_KARMA_NOTE_H
 #define __INCLUDED_KARMA_NOTE_H
 
-typedef struct {
+#ifdef __GNUC__
+#define __declspec(x) __attribute__((x))
+#endif
+
+typedef __declspec(align(32)) struct {
 	int phase1;
 	int phase2;
 
