@@ -4,21 +4,29 @@
 #include "Program.h"
 #include "note.h"
 
-#define MAX_NOTES 10
+#define MAX_NOTES 20
 
 class Channel {
 protected:
 	Program *program;
-
 	bool active;
+	int playing_notes;
 
+private:
+	int panl;
+	int panr;
+	int volume;
+
+	int *leftEcho;
+	int *rightEcho;
+	int echoPos;
+	int echoSamples;
 //	long relSample;
 
 	// ----------------------------
 //	float fPhase1, fPhase2;
 
 //	long samplesPlayed;
-	int playing_notes;
 
 	long currentVelocity;
 //	long currentDelta;
@@ -30,9 +38,13 @@ public:
 //	long currentNote;
 
 	Channel();
-	void process(int *out, long sampleFrames);
+	~Channel();
+
+	void process(int *left, int *right, long sampleFrames);
 	void noteOn(long note, long velocity, long delta);
 	void noteOff(long note);
+
+	void setParameter(int cmd, int param);
 };
 
 
