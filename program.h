@@ -35,6 +35,9 @@ public:
 
 	ADSR amplifier;
 	int gain;
+
+	int echoDelay;
+	int echoAmount;
 };
 
 

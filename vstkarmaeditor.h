@@ -86,6 +86,10 @@ private:
 	CKickButton	*filterButton;
 	CMovieBitmap	*filterDisplay;
 
+	//==Effects===========================================================
+	CKnob		*echoDelay;
+	CKnob		*echoAmount;
+	CParamDisplay	*echoDisplay;
 
 	// others
 	long              oldTicks;

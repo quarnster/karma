@@ -36,7 +36,7 @@ enum
 
 	// others
 	kBackgroundW = 904,
-	kBackgroundH = 589
+	kBackgroundH = 680
 };
 
 
@@ -412,6 +412,29 @@ long VstKarmaEditor::open (void *ptr)
 
 	filterBitmap->forget();
 
+	//==Effects===========================================================
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(369, 600); 
+	echoDelay = new CKnob (size, this, kEchoDelay, bgKnob, knob, point);
+	echoDelay->setInsetValue (7);
+	echoDelay->setValue(effect->getParameter(kEchoDelay));
+	frame->addView (echoDelay);
+
+	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(485, 600); 
+	echoAmount = new CKnob (size, this, kEchoAmount, bgKnob, knob, point);
+	echoAmount->setInsetValue (7);
+	echoAmount->setValue(effect->getParameter(kEchoAmount));
+	frame->addView (echoAmount);
+
+ 	size (0, 0, 80, 14);
+	size.offset(345, 650); 
+	echoDisplay = new CParamDisplay(size);
+	echoDisplay->setStringConvert (stringConvert);
+	echoDisplay->setValue(effect->getParameter(kEchoDelay));
+	frame->addView (echoDisplay);
+
+
 	button->forget();
 	knob->forget ();
 	bgKnob->forget ();
@@ -579,7 +602,10 @@ void VstKarmaEditor::close ()
 	filterButton		= 0;
 	filterDisplay		= 0;
 
-
+	//==Effects===========================================================
+	echoDelay		= 0;
+	echoAmount		= 0;
+	echoDisplay		= 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -721,6 +747,17 @@ void VstKarmaEditor::setParameter (long index, float value)
 		case kFilterType:
 			if (filterDisplay)
 				filterDisplay->setValue(effect->getParameter(index));
+			break;
+
+		case kEchoDelay:
+			if (echoDelay)
+				echoDelay->setValue(effect->getParameter(index));
+			if (echoDisplay)
+				echoDisplay->setValue(effect->getParameter(index));
+			break;
+		case kEchoAmount:
+			if (echoAmount)
+				echoAmount->setValue(effect->getParameter(index));
 			break;
 
 /*
@@ -891,7 +928,7 @@ void VstKarmaEditor::valueChanged (CDrawContext* context, CControl* control)
 //-----------------------------------------------------------------------------
 void stringConvert (float value, char* string)
 {
-	 sprintf (string, "p %.2f", value);
+	 sprintf (string, "%1.4f sec", value*2);
 }
 
 

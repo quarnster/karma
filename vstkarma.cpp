@@ -93,6 +93,8 @@ void VstKarma::setProgram (long program)
 	setParameter(kAmplifierS,	currentProgram->amplifier.sustain / 1024.0f);
 	setParameter(kAmplifierR,	(currentProgram->amplifier.release / (44100 * 2.0f)));
 	setParameter(kGain,		currentProgram->gain / 1024.0f);
+	setParameter(kEchoDelay,	currentProgram->echoDelay / ((float) MAX_ECHO));
+	setParameter(kEchoAmount,	currentProgram->echoAmount / (1024.0f));
 	setParameter(kTest,		!channel[currentProgram->channel].note[0].released);
 }
 
@@ -359,7 +361,8 @@ void VstKarma::setParameter (long index, float value)
 		case kAmplifierS:	currentProgram->amplifier.sustain = (int)(value*1024);	break;
 		case kAmplifierR:	currentProgram->amplifier.release = (int)(value*44100*2);	break;
 		case kGain:		currentProgram->gain		  = (int)(value*1024);	break;
-
+		case kEchoDelay:	currentProgram->echoDelay	  = (int)(value*MAX_ECHO);	break;
+		case kEchoAmount:	currentProgram->echoAmount	  = (int)(value*1024);	break;
 		case kTest:
 			if (value > .5 && channel[currentProgram->channel].note[0].released) {
 				channel[currentProgram->channel].noteOn (0x40, 0x64, 0);
@@ -407,6 +410,8 @@ float VstKarma::getParameter (long index)
 		case kAmplifierS:	value = currentProgram->amplifier.sustain / 1024.0f;	break;
 		case kAmplifierR:	value = (currentProgram->amplifier.release / (44100*2.0f));	break;
 		case kGain:		value = currentProgram->gain / 1024.0f;			break;
+		case kEchoDelay:	value = currentProgram->echoDelay / ((float) MAX_ECHO);		break;
+		case kEchoAmount:	value = currentProgram->echoAmount / 1024.0f;		break;
 		case kTest:
 				value = !channel[currentProgram->channel].note[0].released;
 
