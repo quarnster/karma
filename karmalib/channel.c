@@ -63,6 +63,14 @@ void karma_Channel_init(karma_Channel *channel) {
 }
 //-----------------------------------------------------------------------------------------
 void karma_Channel_free(karma_Channel *channel) {
+	karma_MidiEvent *event = channel->event;
+
+	while (event) {
+		karma_MidiEvent *e = event;
+		event = event->next;
+		free(e);
+	}
+
 	if (channel->leftEcho)
 		free(channel->leftEcho);
 	if (channel->rightEcho)
@@ -162,7 +170,7 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 	int *lBuf;
 	int *rBuf;
 	int i;
-	int frames = length;
+	int samplePos = 0;
 	karma_Program *program = &channel->program;
 
 	if (channel->active || channel->echoSamples > 0) {
@@ -170,12 +178,14 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 		memset(&channelBufferR, 0, BUFFERSIZE * sizeof(int));
 	} else return;
 
-	if (channel->active) {
+	while (channel->active && samplePos < length) {
+		int frames = length - samplePos;
+
 		if (program->echoDelay > 1024 && program->echoAmount > 256)
 			channel->echoSamples = program->echoDelay;
 
-		if (channel->events && frames > channel->event[0].deltaFrames)
-			frames = channel->event[0].deltaFrames;
+		if (channel->event && frames > channel->event->time)
+			frames = channel->event->time;
 
 		for (i = 0; i < channel->playing_notes; i++) {
 			karma_Note *note = &channel->note[i];
@@ -203,9 +213,11 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 			int sample = (((1024 - program->waveformMix) * program->waveform1Table[PHASE2TABLE(program->waveform1, note->phase1, program->wavelen1)]) >> 10) + ((program->waveform2Table[PHASE2TABLE(program->waveform2, note->phase2, program->wavelen2)] * program->waveformMix) >> 10);
 
 			int vol = (((karma_ADSR_getValue(&program->amplifier, note->samplesPlayed, note->relSample) * program->gain) >> 10) * channel->volume) >> 10;
+			int *wf1 = program->waveform1Table;
+			int *wf2 = program->waveform2Table;
 
-			lBuf = channelBufferL;
-			rBuf = channelBufferR;
+			lBuf = &channelBufferL[samplePos];
+			rBuf = &channelBufferR[samplePos];
 
 			if (note->delta > 0)
 			{
@@ -254,9 +266,9 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 
 
 				if (dist > 1024) {
-					sample *= dist;
-					sample >>= 10;
-					sample = sample > 32767 ? 32767 : sample < -32767 ? -32767 : sample;
+					sample = (sample * dist) >> 10;
+					if (sample > 32767) sample = 32767;
+					else if (sample < -32767) sample = -32767;
 				}
 
 				realSample = (short) (((sample * vol) >> 10)&0xffff);
@@ -307,19 +319,14 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 
 				if ((note->samplesPlayed & note->waveformUpdateRate) == note->waveformUpdateRate) {
 					if (program->waveformMix < 50)
-						sample = program->waveform1Table[PHASE2TABLE(program->waveform1, note->phase1, program->wavelen1)];
+						sample = wf1[PHASE2TABLE(program->waveform1, note->phase1, program->wavelen1)];
 					else if (program->waveformMix > 1000)
-						sample = program->waveform2Table[PHASE2TABLE(program->waveform2, note->phase2, program->wavelen2)];
+						sample = wf2[PHASE2TABLE(program->waveform2, note->phase2, program->wavelen2)];
 					else {
-						int tmp = 1024;
-						tmp -= program->waveformMix;
-						sample = program->waveform1Table[PHASE2TABLE(program->waveform1, note->phase1, program->wavelen1)];
-						sample *= tmp;
-						sample >>= 10;
+						int tmp = 1024 - program->waveformMix;
+						sample = (wf1[PHASE2TABLE(program->waveform1, note->phase1, program->wavelen1)] * tmp) >> 10;
 						
-						tmp = program->waveform2Table[PHASE2TABLE(program->waveform2, note->phase2, program->wavelen2)];
-						tmp *= program->waveformMix;
-						tmp >>= 10;
+						tmp = (wf2[PHASE2TABLE(program->waveform2, note->phase2, program->wavelen2)] * program->waveformMix) >> 10;
 						sample += tmp;
 					}
 				}
@@ -350,6 +357,32 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 
 		program->lfo1.phase += (int) (frames * (0xffffffff/44100) * program->lfo1.rate*20);
 		program->lfo2.phase += (int) (frames * (0xffffffff/44100) * program->lfo2.rate*20);
+
+		if (channel->event) {
+			int num = 0;
+			karma_MidiEvent *e = channel->event;
+			karma_MidiEvent *last = NULL;
+			karma_MidiEvent *first = NULL;
+			while (e) {
+				e->time -= frames;
+				if (e->time <= 0) {
+					karma_MidiEvent *tmp = e;
+					karma_Channel_processEvent(channel, e);
+					e = tmp->next;
+					free(tmp);
+					if (last) {
+						last->next = e;
+					}
+					num++;
+				} else {
+					if (!first) first = e;
+					last = e;
+					e = e->next;
+				}
+			}
+			channel->event = first;
+		}
+		samplePos += frames;
 	}
 
 	lBuf = channelBufferL;
@@ -362,7 +395,7 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 			int tmp;
 			int j;
 
-			for (i = 0; i < frames; i++) {
+			for (i = 0; i < length; i++) {
 				if (channel->echoPos >= MAX_ECHO * 2)
 					channel->echoPos = 0;
 
@@ -388,25 +421,10 @@ void karma_Channel_process(karma_Channel *channel, int *left, int *right, long l
 			}
 		}
 	} else {
-		for (i = 0; i < frames; i++) {
+		for (i = 0; i < length; i++) {
 			left[i] += *lBuf++;
 			right[i] += *rBuf++;
 		}
-	}
-	for (i = 0; i < channel->events; i++) {
-		channel->event[i].deltaFrames -= frames;
-		if (channel->event[i].deltaFrames <= 0) {
-			karma_Channel_processEvent(channel, &channel->event[i]);
-
-			channel->events--;
-			if (i != channel->events) {
-				memcpy(&channel->event[i], &channel->event[i+1], (channel->events - i) * sizeof(karma_Event));
-				i--;
-			}
-		}
-	}
-	if (frames != length) {
-		karma_Channel_process(channel, &left[frames], &right[frames], length - frames);
 	}
 }
 void debug(char *str) {
@@ -454,7 +472,6 @@ void karma_Channel_noteOn(karma_Channel *channel, long notenum, long velocity, l
 			}
 		}
 		channel->playing_notes--;
-		debug("max notes\n");
 	}
 
 	if (idx == MAX_NOTES) {
@@ -481,13 +498,18 @@ void karma_Channel_noteOn(karma_Channel *channel, long notenum, long velocity, l
 //-----------------------------------------------------------------------------------------
 void karma_Channel_noteOff(karma_Channel *channel, long notenum) {
 	int i;
+	int idx = -1;
+	int lastSamples = 0;
 	for (i = 0; i < channel->playing_notes; i++) {
-		if (channel->note[i].currentNote == notenum && !channel->note[i].released) {
-			channel->note[i].released = TRUE;
-			channel->note[i].relSample = channel->note[i].samplesPlayed;
-			calculateUpdateRates(&channel->program, &channel->note[i]);
-			break;
+		if (channel->note[i].currentNote == notenum && !channel->note[i].released && channel->note[i].samplesPlayed > lastSamples) {
+			idx = i; 
+			lastSamples = channel->note[i].samplesPlayed;
 		}
+	}
+	if (idx != -1) {
+		channel->note[idx].released = TRUE;
+		channel->note[idx].relSample = channel->note[idx].samplesPlayed;
+		calculateUpdateRates(&channel->program, &channel->note[idx]);
 	}
 }
 
@@ -502,7 +524,7 @@ void karma_Channel_allNotesOff(karma_Channel *channel) {
 }
 
 //-----------------------------------------------------------------------------------------
-void karma_Channel_processEvent(karma_Channel *channel, karma_Event *event) {
+void karma_Channel_processEvent(karma_Channel *channel, karma_MidiEvent *event) {
 	long cmd = event->data[0] & 0xf0;
 
 	if (cmd == 0x80) {	// note off
@@ -524,32 +546,34 @@ void karma_Channel_processEvent(karma_Channel *channel, karma_Event *event) {
 }
 
 //-----------------------------------------------------------------------------------------
-void karma_Channel_addEvent(karma_Channel *channel, karma_Event *event) {
-	long cmd = event->data[0] & 0xf0;
+static addEvent(karma_Channel *channel, karma_MidiEvent *e) {
 
-	if (channel->events == MAX_EVENTS && cmd != 0x90 && event->deltaFrames) {
-		debug("warning: maximum number of events used... this event will be discarded\n");
-		return;
+	if (!channel->event) {
+		// first event in list
+		channel->event = e;
+	} else {
+		karma_MidiEvent *tmp = channel->event;
+		while (tmp->next)
+			tmp = tmp->next;
+		tmp->next = e;
 	}
+}
+//-----------------------------------------------------------------------------------------
+void karma_Channel_addEvent(karma_Channel *channel, karma_MidiEvent *event) {
+	long cmd = event->data[0] & 0xf0;
 
 	if (cmd == 0x90)	{	// note on
 		long note = event->data[1] & 0x7f;
 		long velocity = event->data[2] & 0x7f;
 		if (velocity == 0) {
-			if (channel->events == MAX_EVENTS)
-				karma_Channel_noteOff(channel, note);
-			else {
-				memcpy(&channel->event[channel->events], event, sizeof(karma_Event));
-				channel->event[channel->events].data[0] = 0x80;
-				channel->events++;
-			}
+			event->data[0] = 0x80 | event->data[0]&0xf;
+			addEvent(channel, event);
 		} else 
-			karma_Channel_noteOn(channel, note, velocity, event->deltaFrames);
-	} else if (!event->deltaFrames) {
+			karma_Channel_noteOn(channel, note, velocity, event->time);
+	} else if (!event->time) {
 		karma_Channel_processEvent(channel, event);
 	} else {
-		memcpy(&channel->event[channel->events], event, sizeof(karma_Event));
-		channel->events++;
+		addEvent(channel, event);
 	}
 }
 //-----------------------------------------------------------------------------------------
