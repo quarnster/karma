@@ -85,9 +85,9 @@ long VstKarma::processEvents (VstEvents* ev)
 				channel[chn].noteOff(note);	// note off by velocity 0
 			else
 				channel[chn].noteOn(note, velocity, event->deltaFrames);
-		} else if (cmd == 0xc0) { // Program change
-			long program = midiData[1] & 0x7f;
-			channel[chn].setProgram(&programs[program]);
+//		} else if (cmd == 0xc0) { // Program change
+//			long program = midiData[1] & 0x7f;
+//			channel[chn].setProgram(&programs[program]);
 		} else if (cmd == 0xb0)	// Channel Mode Messages
 			if (midiData[1] == 120 || midiData[1] >= 123) {
 				// 120 -> All sounds off
