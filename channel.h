@@ -4,7 +4,7 @@
 #include "Program.h"
 #include "note.h"
 
-#define MAX_NOTES 5
+#define MAX_NOTES 10
 
 class Channel {
 protected:
@@ -30,7 +30,7 @@ public:
 //	long currentNote;
 
 	Channel();
-	void process(float *out, long sampleFrames);
+	void process(int *out, long sampleFrames);
 	void noteOn(long note, long velocity, long delta);
 	void noteOff(long note);
 };

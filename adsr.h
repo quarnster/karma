@@ -3,14 +3,14 @@
 
 class ADSR {
 public:
-	float attack;
-	float decay;
-	float sustain;
-	float release;
+	int attack;
+	int decay;
+	int sustain;
+	int release;
 
 	ADSR();
 
-	float getValue(long samplepos, long relSample);
+	int getValue(long samplepos, long relSample);
 };
 
 

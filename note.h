@@ -2,8 +2,8 @@
 #define __INCLUDED_KARMA_NOTE_H
 
 typedef struct {
-	float fPhase1;
-	float fPhase2;
+	int phase1;
+	int phase2;
 
 	long currentNote;
 	bool released;

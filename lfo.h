@@ -5,15 +5,15 @@ class LFO {
 public:
 	float waveform;
 	float rate;
-	float amount;
+	int amount;
 
-	float fPhase;
+	int phase;
 
 	LFO() {
 		waveform = 0;
 		rate = 0;
 		amount = 0;
-		fPhase = 0;
+		phase = 0;
 	}
 
 };

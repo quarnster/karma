@@ -4,29 +4,35 @@ ADSR::ADSR() {
 	attack = decay = sustain = release = 0;
 }
 
-float ADSR::getValue(long samplePos, long relSample) {
+int ADSR::getValue(long samplePos, long relSample) {
+/*
 	long alength = (long) (attack * 44100*2);
 	long dlength = (long) (decay * 44100*2);
 	long rlength = (long) (release * 44100*2);
-
+*/
 	if (relSample == -1) {
-		if (samplePos < alength) {
-			return (float) (samplePos / (float) alength);
-		} else if (samplePos < alength + dlength) {
-			samplePos -= alength;
+		if (samplePos < attack) {
+			// attack
+			return (samplePos << 10) / attack;
+		} else if (samplePos < attack + decay) {
+			// decay
+			samplePos -= attack;
+			samplePos <<= 10;
 
-			float percent = (float) (samplePos / (float) dlength);
 
-			return 1 - (percent * (1 - sustain));
+			return 1024 - (((samplePos / decay) * (1024 - sustain)) >> 10);
 		} else {
+			// sustain
 			return sustain;
 		}
 	} else {
+		// release
 		samplePos -= relSample;
-		if (samplePos >= rlength)
+		if (samplePos >= release)
 			return 0;
 
-		return (float) ((1 - (samplePos / (float) rlength)) * sustain);
+		samplePos <<= 10;
+		return ((1024 - (samplePos / release)) * sustain) >> 10;
 	}
 
 

@@ -13,7 +13,7 @@ public:
 
 	float freq1;
 	float freq2;
-	float waveformMix;
+	int waveformMix;
 
 	ADSR modEnv;
 	float modEnvAmount;
@@ -31,10 +31,10 @@ public:
 //	ADSR filterRes;
 	ADSR filterCut;
 
-	float distortion;
+	int distortion;
 
 	ADSR amplifier;
-	float gain;
+	int gain;
 };
 
 

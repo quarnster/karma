@@ -23,45 +23,36 @@ Channel::Channel() {
 //	high = band = low = notch = 0;
 }
 
+#define LIMIT 32767
 //-----------------------------------------------------------------------------------------
 inline int getSample(float wave, int phase) {
-	int sample = (int) (phase>> 20);
+	int sample = (int) (phase >> 20);
 	int pl = sample + 2048;
-	if (wave < 0.2) {				// sin
-		return sinf(sample / 2048.0f * 3.1415927f) * 16384;
-	}
-	else if (wave < 0.4) {			// tri
 
+	if (wave < 0.2) {				// sin
+		return sinf(sample / 2048.0f * 3.1415927f) * LIMIT;
+	}
+	else if (wave < 0.4) {				// tri
 		if (pl > 3072) {
-			float tmp =(pl - 3072) / 1024.0f;
-			sample = (-1 + tmp) * 16384;
+			sample = (pl - 4096) * LIMIT;
 		} else if (pl < 1024) {
-			sample = ((pl / 1024.0f))*16384;
+			sample = pl * LIMIT;
 		} else {
-			sample = (((1 - (pl - 1024) / 1024.0f))) * 16384;
+			sample = (2048 - pl) * LIMIT;
 		}
-/*
-		if (pl > 0.75) {
-			sample = -1 + (pl - 0.75) * 4;
-		} else if (pl < 0.25) {
-			sample = pl * 4;
-		} else {
-			sample = 1 - (pl - 0.25) * 4;
-		}
-		return sample;
-*/
-		return sample;
+
+		return sample >> 10;
 	}
 	else if (wave < 0.6)				// saw
-		return sample << 3;
+		return sample << 4;
 	else if (wave < 0.8)				// square
-		return sample > 0 ? 16384 : -16384;
+		return sample > 0 ? LIMIT : -LIMIT;
 	else						// noise
-		return ((2 * (((rand() % 1000) / 1000.0f)- 0.5f)) * 16384);
+		return ((2 * ((rand() % 1024) - 512)) * LIMIT) >> 10;
 }
 
 //-----------------------------------------------------------------------------------------
-void Channel::process(float *out1, long frames) {
+void Channel::process(int *out1, long frames) {
 
 	if (active) {
 		for (int i = 0; i < playing_notes; i++) {
@@ -70,12 +61,13 @@ void Channel::process(float *out1, long frames) {
 			int noteFreq = (0xffffffff/44100) * (440.0f * powf(2.0, (note[i].currentNote - 69) / 12.0));
 			int lfo1phase = program->lfo1.phase;
 			int lfo2phase = program->lfo2.phase;
-			int lfo1 = getSample(program->lfo1.waveform, lfo1phase) * (program->lfo1.amount * 80);
-			int lfo2 = getSample(program->lfo2.waveform, lfo2phase) * (program->lfo2.amount * 1024);
+			int lfo1 = (getSample(program->lfo1.waveform, lfo1phase) * program->lfo1.amount) >> 10;
+			int lfo2 = (getSample(program->lfo2.waveform, lfo2phase) * program->lfo2.amount) >> 10;
 
 			int lfo1rate = (0xffffffff/44100) * (program->lfo1.rate * 20);
 			int lfo2rate = (0xffffffff/44100) * (program->lfo2.rate * 20);
-			int freq1 = noteFreq * (1 + program->freq1) + lfo1;
+			int freq1base = noteFreq * (1 + program->freq1);
+			int freq1 = freq1base + lfo1;
 			int freq2 = noteFreq * (1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample)) + lfo1;
 
 			if (note[i].delta >= 0)
@@ -91,22 +83,22 @@ void Channel::process(float *out1, long frames) {
 			float f = (float) (2 * sin(3.1415927f * cut / 44100));
 			float q = res;
 			float scale = res;
-			float dist = 1 + (program->distortion*20);
+			int dist = 2 + (program->distortion*20);
 
 			// loop
 			while (--sampleFrames >= 0)
 			{
-				float limit = 44100;
-
-				int sample = getSample(program->waveform1, note[i].phase1);
-				int sample2 = getSample(program->waveform2, note[i].phase2);
-
-				sample = sample * (1-program->waveformMix) + sample2 * program->waveformMix;
-
-				float fsample = sample / 16384.0f;
+				int sample;
+				if (program->waveformMix > 1000)
+					sample = getSample(program->waveform2, note[i].phase2);
+				else if (program->waveformMix < 50)
+					sample = getSample(program->waveform1, note[i].phase1);
+				else
+					sample = ((getSample(program->waveform1, note[i].phase1) * (1024 - program->waveformMix)) >> 10) + ((getSample(program->waveform2, note[i].phase2) * program->waveformMix) >> 10);
 
 				if (freq1 < 0) freq1 = 0;
 				if (freq2 < 0) freq2 = 0;
+/*
 				if (program->filter >= 0.2) {
 					if (cut < 0) cut = 0;
 					if (cut > 8192) cut = 8192;
@@ -130,34 +122,33 @@ void Channel::process(float *out1, long frames) {
 					q = res;
 					scale = res;
 				}
-
-				if (dist > 1.0) {
-					fsample *= dist;
-					float clamp = 1;
-					fsample = fsample > clamp ? clamp : fsample < -clamp ? -clamp : fsample;
+*/
+				if (dist > 2) {
+					sample = (sample * dist) >> 10;
+					sample = sample > 32767 ? 32767 : sample < -32767 ? -32767 : sample;
 				}
 
-				float vol = program->amplifier.getValue(note[i].samplesPlayed, note[i].relSample) * program->gain;
-				fsample *= vol;
-				out1[pos++] += fsample;
+				int vol = (program->amplifier.getValue(note[i].samplesPlayed, note[i].relSample) * program->gain) >> 10;
+				short realSample = (short) (((sample * vol) >> 10)&0xffff);
+				out1[pos++] += realSample;
 
 				note[i].phase1 += freq1;
 				note[i].phase2 += freq2;
 
-				// TODO: fix these two
-				lfo1phase += lfo1rate;
-				lfo2phase += lfo2rate;
-
-//				while (note[i].fPhase1 > limit) note[i].fPhase1 -= limit;
-//				while (note[i].fPhase2 > limit) note[i].fPhase2 -= limit;
-//				while (lfo1phase > limit) lfo1phase -= limit;
-//				while (lfo2phase > limit) lfo2phase -= limit;
-
 				note[i].samplesPlayed++;
-				lfo1 = getSample(program->lfo1.waveform, lfo1phase) * (program->lfo1.amount * 80);
-				lfo2 = getSample(program->lfo2.waveform, lfo2phase) * (program->lfo2.amount * 1024);
-				freq1 = noteFreq * (1 + program->freq1) + lfo1; //.getValue(note[i].samplesPlayed, note[i].relSample) + lfo1;
-				freq2 = noteFreq * (1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample)) + lfo1;
+
+				if (program->lfo1.amount > 50) {
+					lfo1phase += lfo1rate;
+					lfo1 = (getSample(program->lfo1.waveform, lfo1phase) * program->lfo1.amount) >> 10;
+					freq1 = freq1base + lfo1;
+				}
+				if (program->lfo2.amount > 50) {
+					lfo2phase += lfo2rate;
+					lfo2 = (getSample(program->lfo2.waveform, lfo2phase) * program->lfo2.amount) >> 10;
+				}
+
+				if (program->waveformMix > 50)
+					freq2 = noteFreq * (1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample)) + lfo1;
 
 
 				if (vol == 0 && note[i].released) {
@@ -182,10 +173,6 @@ void Channel::process(float *out1, long frames) {
 		}
 		program->lfo1.phase += frames * (0xffffffff/44100) * program->lfo1.rate*20;
 		program->lfo2.phase += frames * (0xffffffff/44100) * program->lfo2.rate*20;
-
-//		while (program->lfo1.fPhase > 44100) program->lfo1.fPhase -= 44100;
-//		while (program->lfo2.fPhase > 44100) program->lfo2.fPhase -= 44100;
-
 	}
 }
 
