@@ -6,8 +6,8 @@
 
 class Program {
 public:
-	float waveform1;
-	float waveform2;
+	int waveform1;
+	int waveform2;
 
 	int wavelen1;
 	int wavelen2;
@@ -18,7 +18,7 @@ public:
 	float freq2;
 	int waveformMix;
 
-	ADSR modEnv;
+	karma_ADSR modEnv;
 	float modEnvAmount;
 
 	LFO lfo1;
@@ -32,11 +32,11 @@ public:
 	float cut;
 	float adsrAmount;
 //	ADSR filterRes;
-	ADSR filterCut;
+	karma_ADSR filterCut;
 
 	int distortion;
 
-	ADSR amplifier;
+	karma_ADSR amplifier;
 	int gain;
 
 	int echoDelay;
