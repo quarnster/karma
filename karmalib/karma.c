@@ -28,13 +28,14 @@ void karma_process(karma_Song *song, int *left, int *right, int samples) {
 			for (i = 0; i < 16; i++)
 				karma_Channel_allNotesOff(&channel[i]);
 		} else {
-			karma_Event kevent;
-			kevent.data[0] = currentEvent->data[0];
-			kevent.data[1] = currentEvent->data[1];
-			kevent.data[2] = currentEvent->data[2];
-			kevent.deltaFrames = currentEvent->time - song->samplesPlayed;
-			if (kevent.deltaFrames < 0) kevent.deltaFrames = 0;
-			karma_Channel_addEvent(&channel[chn], &kevent);
+			karma_MidiEvent *kevent = (karma_MidiEvent*) malloc(sizeof(karma_MidiEvent));
+			memset(kevent, 0, sizeof(karma_MidiEvent));
+			kevent->data[0] = currentEvent->data[0];
+			kevent->data[1] = currentEvent->data[1];
+			kevent->data[2] = currentEvent->data[2];
+			kevent->time = currentEvent->time - song->samplesPlayed;
+			if (kevent->time < 0) kevent->time = 0;
+			karma_Channel_addEvent(&channel[chn], kevent);
 		}
 		currentEvent = currentEvent->next;
 	}

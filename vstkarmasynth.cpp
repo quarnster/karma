@@ -99,16 +99,18 @@ long VstKarma::processEvents (VstEvents* ev)
 		long cmd = midiData[0] & 0xf0;		// extract command
 		long chn = midiData[0] & 0x0f;		// extract channel
 
-		karma_Event kevent;
-		kevent.data[0] = midiData[0];
-		kevent.data[1] = midiData[1];
-		kevent.data[2] = midiData[2];
-		kevent.deltaFrames = event->deltaFrames;
 		if (cmd == 0xb0 && (midiData[1] == 120 || midiData[1] >= 123)) {
 			for (int i = 0; i < 16; i++)
 				karma_Channel_allNotesOff(&channel[i]);
 		} else {
-			karma_Channel_addEvent(&channel[chn], &kevent);
+			karma_MidiEvent *kevent = (karma_MidiEvent*) malloc(sizeof(karma_MidiEvent));
+			memset(kevent, 0, sizeof(karma_MidiEvent));
+			kevent->data[0] = midiData[0];
+			kevent->data[1] = midiData[1];
+			kevent->data[2] = midiData[2];
+			kevent->time = event->deltaFrames;
+
+			karma_Channel_addEvent(&channel[chn], kevent);
 		}
 
 		event++;
