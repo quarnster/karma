@@ -1,0 +1,112 @@
+#ifndef __INCLUDED_KARMA_VSTKARMA_H
+#define __INCLUDED_KARMA_VSTKARMA_H
+
+#include <string.h>
+#include "vst/audioeffectx.h"
+
+#include "VstProgram.h"
+#include "VstChannel.h"
+
+enum
+{
+	kNumPrograms = 16,
+	kNumOutputs = 1,
+
+	kChannel = 0,
+	kWaveform1,
+
+	kFreq1A,
+	kFreq1D,
+	kFreq1S,
+	kFreq1R,
+
+	kVolume1A,
+	kVolume1D,
+	kVolume1S,
+	kVolume1R,
+
+	kWaveform2,
+
+	kFreq2A,
+	kFreq2D,
+	kFreq2S,
+	kFreq2R,
+
+	kVolume2A,
+	kVolume2D,
+	kVolume2S,
+	kVolume2R,
+/*
+	kWaveform2,
+	kFreq2,
+	kVolume2,
+*/
+
+
+	kFilterType,
+	kFilterResA,
+	kFilterResD,
+	kFilterResS,
+	kFilterResR,
+
+	kFilterCutA,
+	kFilterCutD,
+	kFilterCutS,
+	kFilterCutR,
+
+	kDistortion,
+	kVolume,
+
+	kTest,
+
+	kNumParams
+};
+
+
+
+//------------------------------------------------------------------------------------------
+class VstKarma : public AudioEffectX
+{
+public:
+	VstKarma(audioMasterCallback audioMaster);
+	~VstKarma();
+
+	static void Debug(char *blah);
+
+	virtual void process(float **inputs, float **outputs, long sampleframes);
+	virtual void processReplacing(float **inputs, float **outputs, long sampleframes);
+	virtual long processEvents(VstEvents* events);
+
+	virtual void setProgram(long program);
+	virtual long getProgram();
+	virtual void setProgramName(char *name);
+	virtual void getProgramName(char *name);
+	virtual void setParameter(long index, float value);
+	virtual float getParameter(long index);
+	virtual void getParameterLabel(long index, char *label);
+	virtual void getParameterDisplay(long index, char *text);
+	virtual void getParameterName(long index, char *text);
+	virtual void setSampleRate(float sampleRate);
+	virtual void setBlockSize(long blockSize);
+	virtual void resume();
+
+	virtual bool getOutputProperties (long index, VstPinProperties* properties);
+	virtual bool getProgramNameIndexed (long category, long index, char* text);
+	virtual bool copyProgram (long destination);
+	virtual bool getEffectName (char* name);
+	virtual bool getVendorString (char* text);
+	virtual bool getProductString (char* text);
+	virtual long getVendorVersion () {return 1;}
+	virtual long canDo (char* text);
+
+private:
+	void initProcess();
+
+	VstChannel channel[16];
+	VstProgram* programs;
+	VstProgram* currentProgram;
+	long	currentProgramIndex;
+};
+
+
+#endif
