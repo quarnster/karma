@@ -181,12 +181,27 @@ long VstKarmaEditor::open (void *ptr)
 
 	// waveform mix
  	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
-	size.offset(142, 173); 
+	size.offset(144, 93); 
 	waveformMixKnob = new CKnob (size, this, kWaveformMix, bgKnob, knob, point);
 	waveformMixKnob->setInsetValue (7);
 	waveformMixKnob->setValue(effect->getParameter(kWaveformMix));
 	frame->addView (waveformMixKnob);
 
+
+	// wavelen 1 and 2
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(144, 181); 
+	wavelen1Knob = new CKnob (size, this, kWaveLen1, bgKnob, knob, point);
+	wavelen1Knob->setInsetValue (7);
+	wavelen1Knob->setValue(effect->getParameter(kWaveLen1));
+	frame->addView (wavelen1Knob);
+
+ 	size (0, 0, bgKnob->getWidth (), bgKnob->getHeight ());
+	size.offset(144, 263); 
+	wavelen2Knob = new CKnob (size, this, kWaveLen2, bgKnob, knob, point);
+	wavelen2Knob->setInsetValue (7);
+	wavelen2Knob->setValue(effect->getParameter(kWaveLen2));
+	frame->addView (wavelen2Knob);
 
 	// osc1 and 2 display
 	CBitmap* oscBitmap  = new CBitmap (kOscBitmap);
@@ -564,6 +579,8 @@ void VstKarmaEditor::close ()
 	waveform1Button		= 0;
 	waveform2Button		= 0;
 	waveformMixKnob		= 0;
+	wavelen1Knob		= 0;
+	wavelen2Knob		= 0;
 	osc1Display		= 0;
 	osc2Display		= 0;
 
@@ -643,6 +660,14 @@ void VstKarmaEditor::setParameter (long index, float value)
 		case kWaveform2:
 			if (osc2Display)
 				osc2Display->setValue(effect->getParameter(index));
+			break;
+		case kWaveLen1:
+			if (wavelen1Knob)
+				wavelen1Knob->setValue(effect->getParameter(index));
+			break;
+		case kWaveLen2:
+			if (wavelen2Knob)
+				wavelen2Knob->setValue(effect->getParameter(index));
 			break;
 		case kWaveformMix:
 			if (waveformMixKnob)

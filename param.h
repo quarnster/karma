@@ -8,10 +8,11 @@ enum {
 	kChannel = 0,
 	kWaveform1,
 	kFreq1,
+	kWaveLen1,
 
 	kWaveform2,
-
 	kFreq2,
+	kWaveLen2,
 
 	kWaveformMix,
 

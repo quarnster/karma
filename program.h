@@ -8,6 +8,9 @@ class Program {
 public:
 	float waveform1;
 	float waveform2;
+
+	int wavelen1;
+	int wavelen2;
 //	ADSR freq1;
 //	ADSR freq2;
 

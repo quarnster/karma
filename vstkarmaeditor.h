@@ -38,6 +38,10 @@ private:
 	CKnob		*freq1Knob;
 	CKnob		*freq2Knob;
 
+	CKnob		*wavelen1Knob;
+	CKnob		*wavelen2Knob;
+
+
 	CKnob		*waveformMixKnob;
 
 	CMovieBitmap	*osc1Display;

@@ -67,8 +67,10 @@ void VstKarma::setProgram (long program)
 	setParameter(kChannel,		currentProgram->fChannel);
 	setParameter(kWaveform1,	currentProgram->waveform1);
 	setParameter(kFreq1,		(currentProgram->freq1/2.0)+0.5f);
+	setParameter(kWaveLen1,		(currentProgram->wavelen1 / 4096.0f));
 	setParameter(kWaveform2,	currentProgram->waveform2);
 	setParameter(kFreq2,		(currentProgram->freq2/2.0)+0.5f);
+	setParameter(kWaveLen2,		(currentProgram->wavelen2 / 4096.0f));
 	setParameter(kWaveformMix,	(currentProgram->waveformMix / 1024.0f));
 	setParameter(kModEnvA,		(currentProgram->modEnv.attack / (44100 * 2.0f)));
 	setParameter(kModEnvD,		(currentProgram->modEnv.decay / (44100 * 2.0f)));
@@ -337,6 +339,8 @@ void VstKarma::setParameter (long index, float value)
 		case kFreq1:		currentProgram->freq1		= (value*2)-1;	break;
 		case kFreq2:		currentProgram->freq2		= (value*2)-1;	break;
 		case kWaveform2:	currentProgram->waveform2	= value;	break;
+		case kWaveLen1:		currentProgram->wavelen1	= value*4096;	break;
+		case kWaveLen2:		currentProgram->wavelen2	= value*4096;	break;
 		case kModEnvA:		currentProgram->modEnv.attack	= (int)(value*44100*2);	break;
 		case kModEnvD:		currentProgram->modEnv.decay	= (int)(value*44100*2);	break;
 		case kModEnvAmount:	currentProgram->modEnvAmount	= (value*2)-1;	break;
@@ -385,6 +389,8 @@ float VstKarma::getParameter (long index)
 		case kWaveform1:	value = currentProgram->waveform1;		break;
 		case kFreq1:		value = (currentProgram->freq1/2.0)+0.5f;	break;
 		case kFreq2:		value = (currentProgram->freq2/2.0)+0.5f;	break;
+		case kWaveLen1:		value = currentProgram->wavelen1 / 4096.0f;	break;
+		case kWaveLen2:		value = currentProgram->wavelen2 / 4096.0f;	break;
 		case kWaveform2:	value = currentProgram->waveform2;		break;
 		case kModEnvA:		value = (currentProgram->modEnv.attack / (44100*2.0f));		break;
 		case kModEnvD:		value = (currentProgram->modEnv.decay / (44100*2.0f));		break;
