@@ -187,6 +187,12 @@
 			<File
 				RelativePath=".\vstmain.cpp">
 			</File>
+			<File
+				RelativePath=".\waveform.c">
+			</File>
+			<File
+				RelativePath=".\waveform.h">
+			</File>
 			<Filter
 				Name="vstsdk"
 				Filter="">
