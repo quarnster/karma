@@ -1,17 +1,20 @@
 #ifndef __INCLUDED_KARMA_ADSR_H
 #define __INCLUDED_KARMA_ADSR_H
 
-class ADSR {
-public:
+typedef struct {
 	int attack;
 	int decay;
 	int sustain;
 	int release;
+} karma_ADSR;
 
-	ADSR();
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-	int getValue(long samplepos, long relSample);
-};
+int karma_ADSR_getValue(karma_ADSR *adsr, long samplepos, long relSample);
 
-
+#ifdef __cplusplus
+}
+#endif
 #endif
