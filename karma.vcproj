@@ -163,6 +163,9 @@
 				RelativePath=".\note.h">
 			</File>
 			<File
+				RelativePath=".\param.h">
+			</File>
+			<File
 				RelativePath=".\program.h">
 			</File>
 			<File
@@ -238,6 +241,9 @@
 		</Filter>
 		<File
 			RelativePath=".\resources\background.bmp">
+		</File>
+		<File
+			RelativePath=".\bindings.html">
 		</File>
 		<File
 			RelativePath=".\resources\button.bmp">
