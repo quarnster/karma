@@ -14,9 +14,6 @@ public:
 		freq1 = 0;
 		freq2 = 0;
 		amplifier.sustain = 0.5;
-		amplifier.release = 0.5;
-		amplifier.attack = 0.5;
-		amplifier.decay = 0.5;
 		gain = 0.5;
 		channel = 1;
 		waveformMix = 0.5;
