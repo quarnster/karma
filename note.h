@@ -1,8 +1,8 @@
 #ifndef __INCLUDED_KARMA_NOTE_H
 #define __INCLUDED_KARMA_NOTE_H
 
-#ifdef __GNUC__
-#define __declspec(x) __attribute__((x))
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 typedef __declspec(align(32)) struct {
@@ -12,8 +12,8 @@ typedef __declspec(align(32)) struct {
 	long currentNote;
 	int noteFreq;
 
-	bool released;
-	bool active;
+	char released;
+	char active;
 
 	long samplesPlayed;
 	long relSample;
@@ -32,4 +32,7 @@ typedef __declspec(align(32)) struct {
 	int freq2UpdateRate;
 } karma_Note;
 
+#ifdef __cplusplus
+}
+#endif
 #endif
