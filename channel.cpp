@@ -20,7 +20,6 @@ Channel::Channel() {
 		note[i].relSample = -1;
 		note[i].high = note[i].band = note[i].low = note[i].notch = 0;
 	}
-//	high = band = low = notch = 0;
 }
 
 #define LIMIT 32767
@@ -68,7 +67,7 @@ void Channel::process(int *out1, long frames) {
 			int lfo2rate = (0xffffffff/44100) * (program->lfo2.rate * 20);
 			int freq1base = noteFreq * (1 + program->freq1);
 			int freq1 = freq1base + lfo1;
-			int freq2 = noteFreq * (1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample)) + lfo1;
+			int freq2 = noteFreq * ((1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample) / 1024.0f)) + lfo1;
 
 			if (note[i].delta >= 0)
 			{
@@ -78,7 +77,7 @@ void Channel::process(int *out1, long frames) {
 			}
 			long numFrames = sampleFrames;
 
-			float cut = (program->cut + program->adsrAmount * program->filterCut.getValue(note[i].samplesPlayed, note[i].relSample))*8192 + lfo2;
+			float cut = (program->cut + program->adsrAmount * program->filterCut.getValue(note[i].samplesPlayed, note[i].relSample)/1024.0f)*8192 + lfo2 / 1024.0f;
 			float res = program->resonance;
 			float f = (float) (2 * sin(3.1415927f * cut / 44100));
 			float q = res;
@@ -98,10 +97,11 @@ void Channel::process(int *out1, long frames) {
 
 				if (freq1 < 0) freq1 = 0;
 				if (freq2 < 0) freq2 = 0;
-/*
+
 				if (program->filter >= 0.2) {
-					if (cut < 0) cut = 0;
-					if (cut > 8192) cut = 8192;
+					float fsample = (float) (sample / 32767.0f);
+//					if (cut < 0) cut = 0;
+//					if (cut > 8192) cut = 8192;
 
 					note[i].low = note[i].low + f * note[i].band;
 					note[i].high = scale * fsample - note[i].low - q * note[i].band;
@@ -115,14 +115,15 @@ void Channel::process(int *out1, long frames) {
 					else if (program->filter < 0.8)
 						fsample = note[i].band;
 					else
-						sample = note[i].notch;
-					cut = (program->cut + program->adsrAmount * program->filterCut.getValue(note[i].samplesPlayed, note[i].relSample))*8192 + lfo2;
+						fsample = note[i].notch;
+					cut = (program->cut + program->adsrAmount * program->filterCut.getValue(note[i].samplesPlayed, note[i].relSample)/1024.0f)*8192 + lfo2 / 1024.0f;
 
 					f = (float) (2 * sinf(3.141592f * cut / 44100));
 					q = res;
 					scale = res;
+					sample = fsample * 32767.0f;
 				}
-*/
+
 				if (dist > 2) {
 					sample = (sample * dist) >> 10;
 					sample = sample > 32767 ? 32767 : sample < -32767 ? -32767 : sample;
@@ -130,7 +131,9 @@ void Channel::process(int *out1, long frames) {
 
 				int vol = (program->amplifier.getValue(note[i].samplesPlayed, note[i].relSample) * program->gain) >> 10;
 				short realSample = (short) (((sample * vol) >> 10)&0xffff);
+
 				out1[pos++] += realSample;
+
 
 				note[i].phase1 += freq1;
 				note[i].phase2 += freq2;
@@ -148,7 +151,7 @@ void Channel::process(int *out1, long frames) {
 				}
 
 				if (program->waveformMix > 50)
-					freq2 = noteFreq * (1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample)) + lfo1;
+					freq2 = noteFreq * (1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample) / 1024.0f) + lfo1;
 
 
 				if (vol == 0 && note[i].released) {
@@ -165,8 +168,9 @@ void Channel::process(int *out1, long frames) {
 						i--;
 					}
 
-					if (playing_notes == 0) // no notes playing in the channel
+					if (playing_notes == 0) {// no notes playing in the channel
 						active = false;
+					}
 					break;
 				}
 			}
