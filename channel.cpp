@@ -39,7 +39,7 @@ Channel::~Channel() {
 
 #define LIMIT 32767
 //-----------------------------------------------------------------------------------------
-inline int getSample(float wave, int phase) {
+inline int getSample(float wave, int phase, int wavelen) {
 	int sample = (int) (phase >> 20);
 	int pl = sample + 2048;
 
@@ -60,7 +60,7 @@ inline int getSample(float wave, int phase) {
 	else if (wave < 0.6)				// saw
 		return sample << 4;
 	else if (wave < 0.8)				// square
-		return sample > 0 ? LIMIT : -LIMIT;
+		return pl > wavelen ? LIMIT : -LIMIT;
 	else						// noise
 		return ((2 * ((rand() % 1024) - 512)) * LIMIT) >> 10;
 }
@@ -81,8 +81,8 @@ void Channel::process(int *left, int *right, long frames) {
 			int noteFreq = (0xffffffff/44100) * (440.0f * powf(2.0, (note[i].currentNote - 69) / 12.0));
 			int lfo1phase = program->lfo1.phase;
 			int lfo2phase = program->lfo2.phase;
-			int lfo1 = (getSample(program->lfo1.waveform, lfo1phase) * program->lfo1.amount) >> 10;
-			int lfo2 = (getSample(program->lfo2.waveform, lfo2phase) * program->lfo2.amount) >> 10;
+			int lfo1 = (getSample(program->lfo1.waveform, lfo1phase, 2048) * program->lfo1.amount) >> 10;
+			int lfo2 = (getSample(program->lfo2.waveform, lfo2phase, 2048) * program->lfo2.amount) >> 10;
 
 			int lfo1rate = (0xffffffff/44100) * (program->lfo1.rate * 20);
 			int lfo2rate = (0xffffffff/44100) * (program->lfo2.rate * 20);
@@ -112,11 +112,11 @@ void Channel::process(int *left, int *right, long frames) {
 			{
 				int sample;
 				if (program->waveformMix > 1000)
-					sample = getSample(program->waveform2, note[i].phase2);
+					sample = getSample(program->waveform2, note[i].phase2, program->wavelen2);
 				else if (program->waveformMix < 50)
-					sample = getSample(program->waveform1, note[i].phase1);
+					sample = getSample(program->waveform1, note[i].phase1, program->wavelen1);
 				else
-					sample = ((getSample(program->waveform1, note[i].phase1) * (1024 - program->waveformMix)) >> 10) + ((getSample(program->waveform2, note[i].phase2) * program->waveformMix) >> 10);
+					sample = ((getSample(program->waveform1, note[i].phase1, program->wavelen1) * (1024 - program->waveformMix)) >> 10) + ((getSample(program->waveform2, note[i].phase2, program->wavelen2) * program->waveformMix) >> 10);
 
 				if (freq1 < 0) freq1 = 0;
 				if (freq2 < 0) freq2 = 0;
@@ -170,19 +170,19 @@ void Channel::process(int *left, int *right, long frames) {
 
 				if (program->lfo1.amount > 50) {
 					lfo1phase += lfo1rate;
-					lfo1 = (getSample(program->lfo1.waveform, lfo1phase) * program->lfo1.amount) >> 10;
+					lfo1 = (getSample(program->lfo1.waveform, lfo1phase, 2048) * program->lfo1.amount) >> 10;
 					freq1 = freq1base + lfo1;
 				}
 				if (program->lfo2.amount > 50) {
 					lfo2phase += lfo2rate;
-					lfo2 = (getSample(program->lfo2.waveform, lfo2phase) * program->lfo2.amount) >> 10;
+					lfo2 = (getSample(program->lfo2.waveform, lfo2phase, 2048) * program->lfo2.amount) >> 10;
 				}
 
 				if (program->waveformMix > 50)
 					freq2 = noteFreq * (1 + program->freq2 + program->modEnvAmount * program->modEnv.getValue(note[i].samplesPlayed, note[i].relSample) / 1024.0f) + lfo1;
 
 
-				if (note[i].released && vol == 0) {
+				if (note[i].released && vol <= 16) {
 					// this notes volume is too low to hear and the note has been released
 					// so remove it from the playing notes
 					note[i].active = false;
@@ -240,41 +240,56 @@ void Channel::noteOn(long notenum, long velocity, long delta)
 		return;
 	}
 
+	int idx = playing_notes;
+
 	if (playing_notes == MAX_NOTES) {
-		VstKarma::Debug("Maximum number of notes allready playing\n");
+		int index[4];
+		for (int i = 0; i < 4; i++) index[i] = -1;
+
+		int kolen = 0;
+		int snlen = 0;
+		int len = 0;
+		for (int i = 0; i < playing_notes; i++) {
+			if (note[i].currentNote == notenum && note[i].released && (index[0] != -1)) {
+				index[0] = i;
+			} else if (note[i].released && note[i].samplesPlayed > kolen ) {
+				index[1] = i;
+				kolen = note[i].samplesPlayed;
+			} else if (note[i].currentNote == notenum && note[i].samplesPlayed > snlen) {
+				index[2] = i;
+				snlen = note[i].samplesPlayed;
+			} else if (note[i].samplesPlayed >= len) {
+				index[3] = i;
+				len = note[i].samplesPlayed;
+			}
+		}
+		for (int i = 0; i < 4; i++) {
+			if (index[i] != -1) {
+				idx = index[i];
+				break;
+			}
+		}
+		playing_notes--;
+	}
+
+	if (idx == MAX_NOTES) {
+		VstKarma::Debug("ERROR! Maximum notes!\n");
 		return;
 	}
-/*
-	for (int i = 0; i < playing_notes; i++) {
-		if (note[i].currentNote == notenum && note[i].volume == volume) {
-			note[i].delta = delta;
-			note[i].phase1 = note[i].phase2 = 0;
-			note[i].released = false;
-			note[i].active = true;
-			note[i].currentNote = notenum;
-			note[i].samplesPlayed = 0;
-			note[i].relSample = -1;
-			note[i].delta = delta;
-			note[i].high = note[i].band = note[i].low = note[i].notch = 0;
-			note[i].volume = volume;
-			return;
-		}
-	}
-*/
 /*
 	char buf[256];
 	sprintf(buf, "note: %d, %d, %d\n", notenum, delta, volume);
 	VstKarma::Debug(buf);
 */
 
-	note[playing_notes].phase1 = note[playing_notes].phase2 = 0;
-	note[playing_notes].released = false;
-	note[playing_notes].active = true;
-	note[playing_notes].currentNote = notenum;
-	note[playing_notes].samplesPlayed = 0;
-	note[playing_notes].relSample = 0;
-	note[playing_notes].delta = delta;
-	note[playing_notes].high = note[playing_notes].band = note[playing_notes].low = note[playing_notes].notch = 0;
+	note[idx].phase1 = note[idx].phase2 = 0;
+	note[idx].released = false;
+	note[idx].active = true;
+	note[idx].currentNote = notenum;
+	note[idx].samplesPlayed = 0;
+	note[idx].relSample = 0;
+	note[idx].delta = delta;
+	note[idx].high = note[idx].band = note[idx].low = note[idx].notch = 0;
 
 	playing_notes++;
 
@@ -282,6 +297,7 @@ void Channel::noteOn(long notenum, long velocity, long delta)
 		leftEcho = new int[MAX_ECHO*2];
 		rightEcho = new int[MAX_ECHO*2];
 	}
+
 //	program->lfo1.phase = 0;
 	currentVelocity = velocity;
 //	currentDelta = delta;
